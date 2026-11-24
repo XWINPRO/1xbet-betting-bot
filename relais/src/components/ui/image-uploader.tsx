@@ -8,7 +8,7 @@ import { ACCEPTED_IMAGE_TYPES, MAX_IMAGE_BYTES, publicAssetUrl, randomFileName }
 import { cn } from "@/lib/utils";
 
 /** Redimensionne côté navigateur (≤ maxSize px) pour limiter le poids des photos. */
-async function downscale(file: File, maxSize: number): Promise<File> {
+export async function downscale(file: File, maxSize: number): Promise<File> {
   if (!file.type.startsWith("image/") || file.type === "image/webp") return file;
   try {
     const bitmap = await createImageBitmap(file);
