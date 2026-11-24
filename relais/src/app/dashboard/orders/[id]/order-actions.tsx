@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Ban, ChevronDown, MessageCircle } from "lucide-react";
+import { Ban, ChevronDown } from "lucide-react";
 import { setOrderStatusAction } from "@/lib/actions/orders";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
@@ -125,13 +125,4 @@ export function OrderStatusActions({
   );
 }
 
-export function WhatsAppButton({ href, label, size = "md" }: { href: string | null; label: string; size?: "sm" | "md" }) {
-  if (!href) return null;
-  return (
-    <Button asChild variant="whatsapp" size={size}>
-      <a href={href} target="_blank" rel="noopener noreferrer">
-        <MessageCircle /> {label}
-      </a>
-    </Button>
-  );
-}
+export { WhatsAppButton } from "@/components/ui/whatsapp-button";

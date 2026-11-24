@@ -22,6 +22,8 @@ export type MapCanvasProps = {
   pickup?: LatLng | null;
   dropoff?: LatLng | null;
   couriers?: MapCourier[];
+  /** Points supplémentaires (ex. destinations de plusieurs courses). */
+  markers?: { id: string; lat: number; lng: number; label?: string; kind: "pickup" | "dropoff" }[];
   route?: [number, number][] | null;
   className?: string;
   /** Change cette valeur pour recadrer la carte. */
@@ -100,6 +102,7 @@ export default function MapCanvas({
   pickup,
   dropoff,
   couriers = [],
+  markers = [],
   route,
   className,
   fitKey,
@@ -111,6 +114,7 @@ export default function MapCanvas({
   if (pickup) points.push(pickup);
   if (dropoff) points.push(dropoff);
   for (const c of couriers) points.push({ lat: c.lat, lng: c.lng });
+  for (const m of markers) points.push({ lat: m.lat, lng: m.lng });
   if (picker?.value) points.push(picker.value);
 
   const center: [number, number] = points[0] ? [points[0].lat, points[0].lng] : env.mapCenter;
@@ -146,6 +150,16 @@ export default function MapCanvas({
           </Tooltip>
         </Marker>
       ) : null}
+
+      {markers.map((m) => (
+        <Marker key={m.id} position={[m.lat, m.lng]} icon={pinIcon(m.kind === "pickup" ? "A" : "B", m.kind === "pickup" ? "ink" : "accent")} keyboard={false}>
+          {m.label ? (
+            <Tooltip direction="top" offset={[0, -36]}>
+              {m.label}
+            </Tooltip>
+          ) : null}
+        </Marker>
+      ))}
 
       {couriers.map((c) => (
         <React.Fragment key={c.id}>
