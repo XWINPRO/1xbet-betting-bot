@@ -2,6 +2,14 @@
 
 import * as React from "react";
 import { cn } from "@/lib/utils";
+import { formatMoney } from "@/lib/format";
+
+/** Format des valeurs (sérialisable : passé depuis un composant serveur). */
+export type ValueFormat = { kind: "number" } | { kind: "money"; currency: string };
+
+function formatter(format?: ValueFormat) {
+  return format?.kind === "money" ? (n: number) => formatMoney(n, format.currency) : (n: number) => n.toLocaleString("fr-FR");
+}
 
 export type BarSeries = { key: string; label: string; color: string };
 export type BarDatum = { key: string; label: string; fullLabel?: string; values: Record<string, number> };
@@ -34,17 +42,18 @@ export function BarChart({
   data,
   series,
   height = 220,
-  formatValue = (n) => n.toLocaleString("fr-FR"),
+  format,
   title,
   className,
 }: {
   data: BarDatum[];
   series: BarSeries[];
   height?: number;
-  formatValue?: (n: number) => string;
+  format?: ValueFormat;
   title: string;
   className?: string;
 }) {
+  const formatValue = formatter(format);
   const ref = React.useRef<HTMLDivElement>(null);
   const [width, setWidth] = React.useState(0);
   const [hover, setHover] = React.useState<number | null>(null);
@@ -58,7 +67,10 @@ export function BarChart({
   }, []);
 
   const totals = data.map((d) => series.reduce((s, se) => s + (d.values[se.key] ?? 0), 0));
-  const max = niceMax(Math.max(0, ...totals));
+  // Données de comptage : graduations entières (pas de « 0,5 commande »).
+  const integers = format?.kind !== "money" && totals.every((t) => Number.isInteger(t));
+  const rawMax = Math.max(0, ...totals);
+  const max = integers ? Math.max(4, Math.ceil(niceMax(rawMax) / 4) * 4) : niceMax(rawMax);
   const ticks = [0, 0.25, 0.5, 0.75, 1].map((t) => t * max);
   const padLeft = 44;
   const padBottom = 22;
@@ -192,7 +204,8 @@ export function BarChart({
 }
 
 /** Barres horizontales simples (répartition), valeurs en texte. */
-export function BarList({ items, formatValue = (n) => n.toLocaleString("fr-FR"), color = "#2563EB" }: { items: { label: string; value: number }[]; formatValue?: (n: number) => string; color?: string }) {
+export function BarList({ items, format, color = "#2563EB" }: { items: { label: string; value: number }[]; format?: ValueFormat; color?: string }) {
+  const formatValue = formatter(format);
   const max = Math.max(1, ...items.map((i) => i.value));
   return (
     <ul className="flex flex-col gap-3">

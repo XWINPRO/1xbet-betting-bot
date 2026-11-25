@@ -114,7 +114,7 @@ export function StatStrip({ children, className }: { children: React.ReactNode; 
   return (
     <div
       className={cn(
-        "grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-line bg-line shadow-xs sm:grid-cols-3 lg:grid-cols-[repeat(auto-fit,minmax(150px,1fr))] [&>*]:bg-surface",
+        "grid grid-cols-2 overflow-hidden rounded-lg border border-line bg-surface shadow-xs sm:grid-cols-3 lg:grid-cols-[repeat(auto-fit,minmax(136px,1fr))] [&>*]:shadow-[1px_0_0_0_var(--color-line),0_1px_0_0_var(--color-line)]",
         className,
       )}
     >

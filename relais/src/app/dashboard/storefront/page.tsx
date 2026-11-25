@@ -1,7 +1,8 @@
 import { requireStoreOwner, getSiteUrl } from "@/lib/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { PageContainer, PageHeader } from "@/components/ui/page";
-import { StorefrontForm, defaultHours } from "./storefront-form";
+import { StorefrontForm } from "./storefront-form";
+import { defaultHours } from "@/lib/hours";
 import type { OpeningHoursDay } from "@/types/domain";
 
 export const metadata = { title: "Boutique en ligne" };

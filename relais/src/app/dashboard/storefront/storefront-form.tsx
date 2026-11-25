@@ -42,10 +42,6 @@ export type StorefrontValue = {
   is_published: boolean;
 };
 
-export function defaultHours(): OpeningHoursDay[] {
-  return DAYS.map((_, i) => ({ day: i + 1, closed: i === 6, open: "08:00", close: "19:00" }));
-}
-
 export function StorefrontForm({ storeId, initial, siteUrl }: { storeId: string; initial: StorefrontValue; siteUrl: string }) {
   const router = useRouter();
   const [v, setV] = React.useState(initial);

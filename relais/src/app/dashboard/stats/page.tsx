@@ -100,7 +100,7 @@ export default async function StatsPage({ searchParams }: { searchParams: Promis
                 title="Chiffre d'affaires livré par jour"
                 data={days.map((d) => ({ key: d.key, label: d.label, fullLabel: d.fullLabel, values: { revenue: d.revenue } }))}
                 series={[{ key: "revenue", label: "Chiffre d'affaires", color: "#2563EB" }]}
-                formatValue={(n) => formatMoney(n, currency)}
+                format={{ kind: "money", currency }}
               />
             </PanelBody>
           </Panel>
@@ -124,7 +124,7 @@ export default async function StatsPage({ searchParams }: { searchParams: Promis
           </Panel>
           <Panel>
             <PanelHeader title="Encaissements confirmés par moyen" />
-            <PanelBody>{byMethod.length ? <BarList items={byMethod} formatValue={(n) => formatMoney(n, currency)} /> : <p className="text-[13px] text-ink-3">Aucun encaissement confirmé.</p>}</PanelBody>
+            <PanelBody>{byMethod.length ? <BarList items={byMethod} format={{ kind: "money", currency }} /> : <p className="text-[13px] text-ink-3">Aucun encaissement confirmé.</p>}</PanelBody>
           </Panel>
           <Panel>
             <PanelHeader title="Produits les plus vendus" />

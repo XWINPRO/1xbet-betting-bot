@@ -184,6 +184,12 @@ export function CourierLocationProvider({
     };
   }, [shouldShare, start, stop]);
 
+  // Dès que le partage devient actif (passage « disponible », course acceptée),
+  // la dernière mesure connue est envoyée sans attendre le prochain cycle.
+  React.useEffect(() => {
+    if (shouldShare) void send(true);
+  }, [shouldShare, activeJob, send]);
+
   // Envoi périodique : si le téléphone ne produit pas de nouvelle mesure
   // (immobile), on demande une mesure fraîche plutôt que de renvoyer l'ancienne.
   React.useEffect(() => {
