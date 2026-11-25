@@ -4,7 +4,7 @@ import * as React from "react";
 import { toast } from "sonner";
 import { Check, CircleAlert, Clock, MapPinOff, Phone, RefreshCw } from "lucide-react";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
-import { cancelOnDemandAction, confirmReceiptAction, submitClaimAction } from "@/lib/actions/public";
+import { confirmReceiptAction, submitClaimAction } from "@/lib/actions/public";
 import { MapView } from "@/components/map";
 import { useRoute } from "@/components/map/use-route";
 import { Button } from "@/components/ui/button";
@@ -12,22 +12,23 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Field } from "@/components/ui/field";
 import { Input, NativeSelect, Textarea } from "@/components/ui/input";
 import { Notice } from "@/components/ui/page";
-import { formatDateTime, formatDuration, formatMoney, formatTime } from "@/lib/format";
 import { telHref } from "@/lib/phone";
 import { toLatLng } from "@/lib/geo";
 import { CLAIM_CATEGORY, PAYMENT_METHOD, TRACKING_STEPS, VEHICLES } from "@/lib/status";
 import { cn } from "@/lib/utils";
 import type { TrackingPayload } from "@/types/domain";
+import { msg } from "@/i18n/msg";
+import { useI18n } from "@/i18n/client";
 
 const HEADLINE: Record<string, string> = {
-  pending: "Recherche d'un livreur",
-  offered: "Un livreur va prendre en charge votre colis",
-  accepted: "Le livreur se rend au point de collecte",
-  picked_up: "Colis récupéré",
-  in_transit: "Votre livreur est en route",
-  delivered: "Livraison effectuée",
-  failed: "La livraison n'a pas pu être effectuée",
-  cancelled: "Livraison annulée",
+  pending: msg("En attente d'un livreur"),
+  offered: msg("Un livreur va prendre en charge votre colis"),
+  accepted: msg("Le livreur se rend au point de collecte"),
+  picked_up: msg("Colis récupéré"),
+  in_transit: msg("Votre livreur est en route"),
+  delivered: msg("Livraison effectuée"),
+  failed: msg("La livraison n'a pas pu être effectuée"),
+  cancelled: msg("Livraison annulée"),
 };
 
 const STEP_INDEX: Record<string, number> = { pending: 0, offered: 0, accepted: 1, picked_up: 2, in_transit: 3, delivered: 4 };
@@ -46,6 +47,7 @@ function useSecondsSince(iso: string | null | undefined, serverTime: string) {
 }
 
 export function TrackingView({ token, initial }: { token: string; initial: TrackingPayload }) {
+  const { t, f } = useI18n();
   const [data, setData] = React.useState(initial);
   const [refreshing, setRefreshing] = React.useState(false);
   const supabase = React.useMemo(() => getSupabaseBrowserClient(), []);
@@ -87,6 +89,8 @@ export function TrackingView({ token, initial }: { token: string; initial: Track
   const route = useRoute(data.live && courierPoint && !stale ? courierPoint : null, data.status === "accepted" ? pickup : dropoff, courierPoint ? `${pos!.at}` : 0);
   const stepIndex = STEP_INDEX[data.status] ?? -1;
   const closed = ["delivered", "failed", "cancelled"].includes(data.status);
+  // Plan « suivi par étapes » : pas de carte ni de position.
+  const liveTracking = data.tracking_level === "live";
 
   return (
     <div className="flex flex-col gap-4">
@@ -95,17 +99,17 @@ export function TrackingView({ token, initial }: { token: string; initial: Track
           <div>
             <p className="font-mono text-xs text-ink-3">
               {data.reference}
-              {data.order_reference ? ` · commande ${data.order_reference}` : ""}
+              {data.order_reference ? ` · ${t("commande {ref}", { ref: data.order_reference })}` : ""}
             </p>
-            <h1 className="mt-1 text-lg font-semibold tracking-[-0.01em]">{HEADLINE[data.status]}</h1>
-            {route.state === "ready" && data.live && !stale ? (
+            <h1 className="mt-1 text-lg font-semibold tracking-[-0.01em]">{t(HEADLINE[data.status])}</h1>
+            {route.state === "ready" && liveTracking && data.live && !stale ? (
               <p className="mt-0.5 text-[13px] text-ink-2">
-                Arrivée estimée vers {formatTime(new Date(Date.now() + route.durationSeconds * 1000))}
-                <span className="text-ink-3"> · d&apos;après l&apos;itinéraire ({formatDuration(route.durationSeconds)})</span>
+                {t("Arrivée estimée vers {time}", { time: f.time(new Date(Date.now() + route.durationSeconds * 1000)) })}
+                <span className="text-ink-3"> · {t("d'après l'itinéraire ({duration})", { duration: f.duration(route.durationSeconds) })}</span>
               </p>
             ) : null}
           </div>
-          <Button size="icon" variant="ghost" onClick={() => void reload()} aria-label="Actualiser" loading={refreshing}>
+          <Button size="icon" variant="ghost" onClick={() => void reload()} aria-label={t("Actualiser")} loading={refreshing}>
             {!refreshing ? <RefreshCw /> : null}
           </Button>
         </div>
@@ -129,8 +133,8 @@ export function TrackingView({ token, initial }: { token: string; initial: Track
                     {done ? <Check className="size-3" strokeWidth={3} /> : null}
                   </span>
                   <div className="-mt-0.5 min-w-0">
-                    <p className={cn("text-[14px]", done ? "font-medium text-ink" : "text-ink-3")}>{step.label}</p>
-                    {at && done ? <p className="text-xs text-ink-3">{formatDateTime(at)}</p> : null}
+                    <p className={cn("text-[14px]", done ? "font-medium text-ink" : "text-ink-3")}>{t(step.label)}</p>
+                    {at && done ? <p className="text-xs text-ink-3">{f.dateTime(at)}</p> : null}
                   </div>
                 </li>
               );
@@ -138,18 +142,25 @@ export function TrackingView({ token, initial }: { token: string; initial: Track
           </ol>
         ) : (
           <Notice tone={data.status === "failed" ? "danger" : "neutral"} className="mt-4" icon={<CircleAlert />}>
-            {data.status === "failed" ? "Le livreur a signalé un échec. La boutique ou le service vous recontactera." : "Cette livraison a été annulée."}
+            {data.status === "failed" ? t("Le livreur a signalé un échec. La boutique vous recontactera.") : t("Cette livraison a été annulée.")}
           </Notice>
         )}
       </section>
 
-      {!closed ? (
+      {!closed && !liveTracking ? (
+        <p className="flex items-start gap-2 rounded-lg border border-line bg-surface px-4 py-3 text-[13px] text-ink-3">
+          <Clock className="mt-0.5 size-3.5 shrink-0" />
+          {t("Suivi par étapes : chaque étape s'affiche dès que le livreur la valide. La position du livreur n'est pas partagée pour cette livraison.")}
+        </p>
+      ) : null}
+
+      {!closed && liveTracking ? (
         <section className="overflow-hidden rounded-lg border border-line bg-surface shadow-xs">
           <div className="h-[300px] sm:h-[360px]">
             <MapView
               pickup={pickup}
               dropoff={dropoff}
-              couriers={data.live && courierPoint ? [{ id: "courier", lat: courierPoint.lat, lng: courierPoint.lng, accuracy: pos!.accuracy, stale, label: data.courier?.first_name ?? "Livreur", highlight: true, status: "busy" }] : []}
+              couriers={data.live && courierPoint ? [{ id: "courier", lat: courierPoint.lat, lng: courierPoint.lng, accuracy: pos!.accuracy, stale, label: data.courier?.first_name ?? t("Livreur"), highlight: true, status: "busy" }] : []}
               route={route.state === "ready" ? route.coordinates : null}
               fitKey={`${data.status}-${courierPoint ? "c" : "n"}`}
               scrollWheelZoom={false}
@@ -158,20 +169,21 @@ export function TrackingView({ token, initial }: { token: string; initial: Track
           <div className="flex items-center gap-2 border-t border-line px-4 py-2.5 text-xs">
             {!data.live ? (
               <span className="flex items-center gap-1.5 text-ink-3">
-                <Clock className="size-3.5" /> Le suivi en direct démarre quand le livreur accepte la course.
+                <Clock className="size-3.5" /> {t("Le suivi en direct démarre quand le livreur accepte la course.")}
               </span>
             ) : !pos ? (
               <span className="flex items-center gap-1.5 text-warning-ink">
-                <MapPinOff className="size-3.5" /> Position indisponible : le téléphone du livreur n&apos;a pas encore transmis sa position.
+                <MapPinOff className="size-3.5" /> {t("Position indisponible : le téléphone du livreur n'a pas encore transmis sa position.")}
               </span>
             ) : stale ? (
               <span className="flex items-center gap-1.5 text-warning-ink">
-                <MapPinOff className="size-3.5" /> Position obsolète — dernière mise à jour à {formatTime(pos.at)}
-                {age !== null ? ` (il y a ${formatDuration(age)})` : ""}.
+                <MapPinOff className="size-3.5" /> {t("Position obsolète — dernière mise à jour à {time}", { time: f.time(pos.at) })}
+                {age !== null ? ` (${t("il y a {duration}", { duration: f.duration(age) })})` : ""}.
               </span>
             ) : (
               <span className="flex items-center gap-1.5 text-success">
-                <span className="size-2 animate-pulse-dot rounded-full bg-success" /> Position en direct · mise à jour {age !== null && age < 60 ? `il y a ${age} s` : `à ${formatTime(pos.at)}`}
+                <span className="size-2 animate-pulse-dot rounded-full bg-success" /> {t("Position en direct")} ·{" "}
+                {age !== null && age < 60 ? t("mise à jour il y a {s} s", { s: age }) : t("mise à jour à {time}", { time: f.time(pos.at) })}
               </span>
             )}
           </div>
@@ -180,32 +192,32 @@ export function TrackingView({ token, initial }: { token: string; initial: Track
 
       <section className="grid gap-px overflow-hidden rounded-lg border border-line bg-line sm:grid-cols-2">
         <div className="bg-surface p-4">
-          <p className="text-xs font-medium text-ink-3">Point de collecte</p>
-          <p className="mt-0.5 text-[14px] font-medium">{data.pickup.label}</p>
+          <p className="text-xs font-medium text-ink-3">{t("Point de collecte")}</p>
+          <p className="mt-0.5 text-[14px] font-medium">{data.pickup.label || t("Point de collecte")}</p>
           <p className="text-[13px] text-ink-2">{data.pickup.address}</p>
         </div>
         <div className="bg-surface p-4">
-          <p className="text-xs font-medium text-ink-3">Destination</p>
+          <p className="text-xs font-medium text-ink-3">{t("Destination")}</p>
           <p className="mt-0.5 text-[14px] font-medium">{data.dropoff.label}</p>
           <p className="text-[13px] text-ink-2">{data.dropoff.address}</p>
         </div>
       </section>
 
-      {data.courier || data.collect_amount > 0 || data.price ? (
+      {data.courier || data.collect_amount > 0 ? (
         <section className="flex flex-col gap-3 rounded-lg border border-line bg-surface p-4">
           {data.courier ? (
             <div className="flex items-center gap-3">
               <div className="min-w-0 flex-1">
-                <p className="text-xs text-ink-3">Votre livreur</p>
+                <p className="text-xs text-ink-3">{t("Votre livreur")}</p>
                 <p className="text-[14px] font-medium">
                   {data.courier.first_name}
-                  {data.courier.vehicle_type ? <span className="font-normal text-ink-3"> · {VEHICLES[data.courier.vehicle_type] ?? data.courier.vehicle_type}</span> : null}
+                  {data.courier.vehicle_type ? <span className="font-normal text-ink-3"> · {VEHICLES[data.courier.vehicle_type] ? t(VEHICLES[data.courier.vehicle_type]) : data.courier.vehicle_type}</span> : null}
                 </p>
               </div>
               {data.courier.phone ? (
                 <Button asChild variant="secondary">
                   <a href={telHref(data.courier.phone) ?? "#"}>
-                    <Phone /> Appeler
+                    <Phone /> {t("Appeler")}
                   </a>
                 </Button>
               ) : null}
@@ -213,12 +225,7 @@ export function TrackingView({ token, initial }: { token: string; initial: Track
           ) : null}
           {data.collect_amount > 0 && data.status !== "delivered" ? (
             <p className="rounded-md bg-warning-soft px-3 py-2 text-[13.5px] text-warning-ink">
-              À régler à la livraison : <span className="font-semibold tabular">{formatMoney(data.collect_amount, data.currency)}</span> ({PAYMENT_METHOD[data.payment_method]})
-            </p>
-          ) : null}
-          {data.price ? (
-            <p className="text-[13px] text-ink-3">
-              Prix de la course : <span className="font-medium text-ink tabular">{formatMoney(data.price, data.currency)}</span>
+              {t("À régler à la livraison :")} <span className="font-semibold tabular">{f.money(data.collect_amount, data.currency)}</span> ({t(PAYMENT_METHOD[data.payment_method])})
             </p>
           ) : null}
         </section>
@@ -230,6 +237,7 @@ export function TrackingView({ token, initial }: { token: string; initial: Track
 }
 
 function TrackingActions({ token, data, onChange }: { token: string; data: TrackingPayload; onChange: () => Promise<void> }) {
+  const { t, f } = useI18n();
   const [pending, setPending] = React.useState<string | null>(null);
   const [claimOpen, setClaimOpen] = React.useState(false);
   const [claim, setClaim] = React.useState({ category: "late", description: "", name: "", phone: "" });
@@ -246,43 +254,26 @@ function TrackingActions({ token, data, onChange }: { token: string; data: Track
             setPending("confirm");
             const res = await confirmReceiptAction(token);
             setPending(null);
-            if (!res.ok) return toast.error(res.error);
-            toast.success(res.message ?? "Merci !");
+            if (!res.ok) return toast.error(t(res.error));
+            toast.success(t(res.message ?? "Merci !"));
             await onChange();
           }}
         >
-          <Check /> Je confirme avoir reçu mon colis
+          <Check /> {t("Je confirme avoir reçu mon colis")}
         </Button>
       ) : null}
-      {data.timestamps.recipient_confirmed_at ? <Notice tone="success">Réception confirmée le {formatDateTime(data.timestamps.recipient_confirmed_at)}.</Notice> : null}
-      {data.can_cancel ? (
-        <Button
-          variant="danger-ghost"
-          loading={pending === "cancel"}
-          onClick={async () => {
-            if (!window.confirm("Annuler cette demande de livraison ?")) return;
-            setPending("cancel");
-            const res = await cancelOnDemandAction(token);
-            setPending(null);
-            if (!res.ok) return toast.error(res.error);
-            toast.success(res.message ?? "");
-            await onChange();
-          }}
-        >
-          Annuler la demande
-        </Button>
-      ) : null}
+      {data.timestamps.recipient_confirmed_at ? <Notice tone="success">{t("Réception confirmée le {date}.", { date: f.dateTime(data.timestamps.recipient_confirmed_at) })}</Notice> : null}
       <Button variant="ghost" onClick={() => setClaimOpen(true)}>
-        Signaler un problème
+        {t("Signaler un problème")}
       </Button>
       <Dialog open={claimOpen} onOpenChange={setClaimOpen}>
         <DialogContent
-          title="Signaler un problème"
-          description="Votre message est transmis à la boutique et au service client."
+          title={t("Signaler un problème")}
+          description={t("Votre message est transmis à la boutique et au service client.")}
           footer={
             claimRef ? (
               <Button variant="primary" onClick={() => setClaimOpen(false)}>
-                Fermer
+                {t("Fermer")}
               </Button>
             ) : (
               <Button
@@ -292,38 +283,38 @@ function TrackingActions({ token, data, onChange }: { token: string; data: Track
                   setPending("claim");
                   const res = await submitClaimAction(token, claim);
                   setPending(null);
-                  if (!res.ok) return toast.error(res.error);
+                  if (!res.ok) return toast.error(t(res.error));
                   setClaimRef(res.data.reference);
                 }}
               >
-                Envoyer
+                {t("Envoyer")}
               </Button>
             )
           }
         >
           {claimRef ? (
-            <Notice tone="success" title={`Réclamation ${claimRef} enregistrée`}>
-              Conservez cette référence. Vous serez recontacté par téléphone.
+            <Notice tone="success" title={t("Réclamation {ref} enregistrée", { ref: claimRef })}>
+              {t("Conservez cette référence. Vous serez recontacté par téléphone.")}
             </Notice>
           ) : (
             <div className="flex flex-col gap-4">
-              <Field label="Motif" htmlFor="cl-cat">
+              <Field label={t("Motif")} htmlFor="cl-cat">
                 <NativeSelect id="cl-cat" value={claim.category} onChange={(e) => setClaim({ ...claim, category: e.target.value })}>
                   {Object.entries(CLAIM_CATEGORY).map(([k, v]) => (
                     <option key={k} value={k}>
-                      {v}
+                      {t(v)}
                     </option>
                   ))}
                 </NativeSelect>
               </Field>
-              <Field label="Description" htmlFor="cl-desc">
+              <Field label={t("Description")} htmlFor="cl-desc">
                 <Textarea id="cl-desc" rows={3} value={claim.description} onChange={(e) => setClaim({ ...claim, description: e.target.value })} />
               </Field>
               <div className="grid gap-4 sm:grid-cols-2">
-                <Field label="Votre nom" htmlFor="cl-name">
+                <Field label={t("Votre nom")} htmlFor="cl-name">
                   <Input id="cl-name" value={claim.name} onChange={(e) => setClaim({ ...claim, name: e.target.value })} />
                 </Field>
-                <Field label="Téléphone" htmlFor="cl-phone">
+                <Field label={t("Téléphone")} htmlFor="cl-phone">
                   <Input id="cl-phone" type="tel" value={claim.phone} onChange={(e) => setClaim({ ...claim, phone: e.target.value })} />
                 </Field>
               </div>

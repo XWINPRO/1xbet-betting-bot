@@ -4,9 +4,12 @@ import { getStoreContext } from "@/lib/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { publicAssetUrl } from "@/lib/storage";
 import { DashboardTopbar } from "./topbar";
+import { msg } from "@/i18n/msg";
+import { getI18n } from "@/i18n/server";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const ctx = await getStoreContext();
+  const { t } = await getI18n();
   const supabase = await createSupabaseServerClient();
   const [{ count: newOrders }, { count: unassigned }] = await Promise.all([
     supabase.from("orders").select("id", { count: "exact", head: true }).eq("store_id", ctx.storeId).eq("status", "new"),
@@ -20,25 +23,26 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const allSections: ShellSection[] = [
     {
       items: [
-        { href: "/dashboard", label: "Vue d'ensemble", icon: "overview", exact: true },
-        { href: "/dashboard/orders", label: "Commandes", icon: "orders", badge: newOrders ?? 0 },
-        ...(canSeeCatalog ? [{ href: "/dashboard/products", label: "Produits", icon: "products" as const }] : []),
-        ...(canSeeCustomers ? [{ href: "/dashboard/customers", label: "Clients", icon: "customers" as const }] : []),
+        { href: "/dashboard", label: msg("Vue d'ensemble"), icon: "overview", exact: true },
+        { href: "/dashboard/orders", label: msg("Commandes"), icon: "orders", badge: newOrders ?? 0 },
+        ...(canSeeCatalog ? [{ href: "/dashboard/products", label: msg("Produits"), icon: "products" as const }] : []),
+        ...(canSeeCustomers ? [{ href: "/dashboard/customers", label: msg("Clients"), icon: "customers" as const }] : []),
       ],
     },
     {
-      title: "Logistique",
+      title: msg("Logistique"),
       items: [
-        { href: "/dashboard/deliveries", label: "Livraisons", icon: "deliveries", badge: unassigned ?? 0 },
-        ...(canDispatch ? [{ href: "/dashboard/couriers", label: "Livreurs", icon: "couriers" as const }] : []),
+        { href: "/dashboard/deliveries", label: msg("Livraisons"), icon: "deliveries", badge: unassigned ?? 0 },
+        ...(canDispatch ? [{ href: "/dashboard/couriers", label: msg("Livreurs"), icon: "couriers" as const }] : []),
       ],
     },
     {
-      title: "Boutique",
+      title: msg("Boutique"),
       items: [
-        ...(ctx.isOwner ? [{ href: "/dashboard/storefront", label: "Boutique en ligne", icon: "storefront" as const }] : []),
-        ...(ctx.can("stats.view") ? [{ href: "/dashboard/stats", label: "Statistiques", icon: "stats" as const }] : []),
-        ...(ctx.isOwner ? [{ href: "/dashboard/settings", label: "Paramètres", icon: "settings" as const }] : []),
+        ...(ctx.isOwner ? [{ href: "/dashboard/storefront", label: msg("Boutique en ligne"), icon: "storefront" as const }] : []),
+        ...(ctx.can("stats.view") ? [{ href: "/dashboard/stats", label: msg("Statistiques"), icon: "stats" as const }] : []),
+        ...(ctx.isOwner ? [{ href: "/dashboard/billing", label: msg("Abonnement"), icon: "billing" as const }] : []),
+        ...(ctx.isOwner ? [{ href: "/dashboard/settings", label: msg("Paramètres"), icon: "settings" as const }] : []),
       ],
     },
   ];
@@ -66,7 +70,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
     >
       {ctx.store.status === "suspended" ? (
         <div className="border-b border-danger/20 bg-danger-soft px-4 py-2.5 text-center text-[13px] text-danger-ink sm:px-6">
-          Cette boutique est suspendue par l&apos;administration : la page publique et la création de commandes sont désactivées.
+          {t("Cette boutique est suspendue par l'administration : la page publique et la création de commandes sont désactivées.")}
         </div>
       ) : null}
       {children}

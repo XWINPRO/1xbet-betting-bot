@@ -1,5 +1,6 @@
 "use client";
 
+import { useI18n } from "@/i18n/client";
 import * as React from "react";
 import { LocateFixed, MapPin, Search } from "lucide-react";
 import { toast } from "sonner";
@@ -32,6 +33,7 @@ export function LocationPicker({
   className?: string;
   height?: number;
 }) {
+  const { t } = useI18n();
   const [query, setQuery] = React.useState("");
   const [results, setResults] = React.useState<GeocodeResult[] | null>(null);
   const [searching, setSearching] = React.useState(false);
@@ -52,10 +54,10 @@ export function LocationPicker({
     try {
       const res = await fetch(`/api/geocode?q=${encodeURIComponent(query.trim())}`);
       const data = (await res.json()) as { results?: GeocodeResult[]; error?: string };
-      if (data.error === "too_many_requests") toast.error("Trop de recherches. Patientez un instant.");
+      if (data.error === "too_many_requests") toast.error(t("Trop de recherches. Patientez un instant."));
       setResults(data.results ?? []);
     } catch {
-      toast.error("Recherche d'adresse indisponible.");
+      toast.error(t("Recherche d'adresse indisponible."));
     } finally {
       setSearching(false);
     }
@@ -63,7 +65,7 @@ export function LocationPicker({
 
   function locate() {
     if (!("geolocation" in navigator)) {
-      toast.error("La géolocalisation n'est pas disponible sur cet appareil.");
+      toast.error(t("La géolocalisation n'est pas disponible sur cet appareil."));
       return;
     }
     setLocating(true);
@@ -71,11 +73,11 @@ export function LocationPicker({
       (pos) => {
         setLocating(false);
         onChange({ lat: pos.coords.latitude, lng: pos.coords.longitude });
-        if (pos.coords.accuracy > 100) toast.message(`Position approximative (± ${Math.round(pos.coords.accuracy)} m). Ajustez le marqueur si besoin.`);
+        if (pos.coords.accuracy > 100) toast.message(t("Position approximative (± {m} m). Ajustez le marqueur si besoin.", { m: Math.round(pos.coords.accuracy) }));
       },
       (err) => {
         setLocating(false);
-        toast.error(err.code === err.PERMISSION_DENIED ? "Autorisez l'accès à la localisation dans votre navigateur." : "Position introuvable. Placez le point manuellement.");
+        toast.error(err.code === err.PERMISSION_DENIED ? t("Autorisez l'accès à la localisation dans votre navigateur.") : t("Position introuvable. Placez le point manuellement."));
       },
       { enableHighAccuracy: true, timeout: 15000, maximumAge: 30000 },
     );
@@ -95,17 +97,17 @@ export function LocationPicker({
                   void search();
                 }
               }}
-              placeholder="Rechercher une adresse, un quartier…"
+              placeholder={t("Rechercher une adresse, un quartier…")}
               className="h-8"
-              aria-label="Rechercher une adresse"
+              aria-label={t("Rechercher une adresse")}
             />
             <Button type="button" size="sm" onClick={() => void search()} loading={searching}>
-              <Search /> Chercher
+              <Search /> {t("Chercher")}
             </Button>
           </div>
           {results ? (
             <ul className="mt-2 max-h-40 overflow-y-auto rounded-sm border border-line">
-              {results.length === 0 ? <li className="px-3 py-2 text-[13px] text-ink-3">Aucun résultat.</li> : null}
+              {results.length === 0 ? <li className="px-3 py-2 text-[13px] text-ink-3">{t("Aucun résultat.")}</li> : null}
               {results.map((r, i) => (
                 <li key={i}>
                   <button
@@ -136,11 +138,11 @@ export function LocationPicker({
         <div className="flex items-center gap-1">
           {value ? (
             <Button type="button" size="xs" variant="ghost" onClick={() => onChange(null)}>
-              Effacer
+              {t("Effacer")}
             </Button>
           ) : null}
           <Button type="button" size="xs" variant="secondary" onClick={locate} loading={locating}>
-            <LocateFixed /> Ma position
+            <LocateFixed /> {t("Ma position")}
           </Button>
         </div>
       </div>

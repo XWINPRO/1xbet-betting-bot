@@ -1,8 +1,13 @@
+"use client";
+
 import Link from "next/link";
+import { LanguageSwitcher } from "@/components/layout/language-switcher";
+import { useI18n } from "@/i18n/client";
 import { Brand } from "@/components/brand";
 import { publicAssetUrl } from "@/lib/storage";
 
 export function PublicHeader({ store }: { store?: { name: string; slug: string | null; logo_path: string | null } | null }) {
+  const { t } = useI18n();
   const logo = publicAssetUrl(store?.logo_path);
   return (
     <header className="border-b border-line bg-surface">
@@ -18,7 +23,10 @@ export function PublicHeader({ store }: { store?: { name: string; slug: string |
         ) : (
           <Brand />
         )}
-        <span className="text-xs text-ink-4">Suivi de livraison</span>
+        <div className="flex items-center gap-3">
+          <span className="hidden text-xs text-ink-4 sm:inline">{t("Suivi de livraison")}</span>
+          <LanguageSwitcher compact />
+        </div>
       </div>
     </header>
   );

@@ -1,5 +1,7 @@
 "use client";
 
+import { useI18n } from "@/i18n/client";
+import { LanguageSwitcher } from "@/components/layout/language-switcher";
 import * as React from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
@@ -10,7 +12,6 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Field } from "@/components/ui/field";
 import { Input, NativeSelect, Textarea } from "@/components/ui/input";
 import { Notice } from "@/components/ui/page";
-import { formatMoney } from "@/lib/format";
 import { telHref } from "@/lib/phone";
 import { publicAssetUrl } from "@/lib/storage";
 import { whatsappShareUrl, whatsappUrl, waMessages } from "@/lib/whatsapp";
@@ -52,7 +53,6 @@ export type ShopStore = {
 
 type CartLine = { key: string; product_id: string; variant_id: string | null; quantity: number };
 
-const DAYS = ["lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche"];
 
 function openState(hours: OpeningHoursDay[]) {
   if (hours.length !== 7) return null;
@@ -63,7 +63,8 @@ function openState(hours: OpeningHoursDay[]) {
   const today = hours.find((h) => h.day === idx + 1);
   if (!today) return null;
   const open = !today.closed && time >= today.open && time < today.close;
-  return { open, today, label: open ? `Ouvert · ferme à ${today.close}` : today.closed ? "Fermé aujourd'hui" : time < today.open ? `Fermé · ouvre à ${today.open}` : "Fermé" };
+  const state = open ? "open" : today.closed ? "closed_today" : time < today.open ? "opens_later" : "closed";
+  return { open, today, state } as const;
 }
 
 function unitPrice(p: ShopProduct, variantId: string | null) {
@@ -96,6 +97,8 @@ function useCart(slug: string) {
 }
 
 export function Storefront({ store, products, categories, shareBase }: { store: ShopStore; products: ShopProduct[]; categories: { id: string; name: string }[]; shareBase: string }) {
+  const i18n = useI18n();
+  const { t, tn, f, locale } = i18n;
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -130,7 +133,7 @@ export function Storefront({ store, products, categories, shareBase }: { store: 
       if (existing) return lines.map((l) => (l.key === key ? { ...l, quantity: Math.min(99, l.quantity + quantity) } : l));
       return [...lines, { key, product_id: productId, variant_id: variantId, quantity }];
     });
-    toast.success("Ajouté au panier.");
+    toast.success(t("Ajouté au panier."));
   }
 
   const banner = publicAssetUrl(store.banner_path);
@@ -170,7 +173,13 @@ export function Storefront({ store, products, categories, shareBase }: { store: 
                   {status ? (
                     <span className={cn("inline-flex items-center gap-1", status.open ? "text-success" : "text-ink-3")}>
                       <Clock className="size-3.5" />
-                      {status.label}
+                      {status.state === "open"
+                        ? t("Ouvert · ferme à {time}", { time: status.today.close })
+                        : status.state === "closed_today"
+                          ? t("Fermé aujourd'hui")
+                          : status.state === "opens_later"
+                            ? t("Fermé · ouvre à {time}", { time: status.today.open })
+                            : t("Fermé")}
                     </span>
                   ) : null}
                 </p>
@@ -179,7 +188,7 @@ export function Storefront({ store, products, categories, shareBase }: { store: 
             <div className="flex flex-wrap gap-2">
               {contactPhone ? (
                 <Button asChild variant="whatsapp">
-                  <a href={whatsappUrl(contactPhone, `Bonjour ${store.name}, `) ?? "#"} target="_blank" rel="noopener noreferrer">
+                  <a href={whatsappUrl(contactPhone, `${t("Bonjour {name},", { name: store.name })} `) ?? "#"} target="_blank" rel="noopener noreferrer">
                     <MessageCircle /> WhatsApp
                   </a>
                 </Button>
@@ -187,12 +196,12 @@ export function Storefront({ store, products, categories, shareBase }: { store: 
               {store.phone ? (
                 <Button asChild variant="secondary">
                   <a href={telHref(store.phone) ?? "#"}>
-                    <Phone /> Appeler
+                    <Phone /> {t("Appeler")}
                   </a>
                 </Button>
               ) : null}
-              <Button asChild variant="ghost" aria-label="Partager la boutique">
-                <a href={whatsappShareUrl(`${store.name} — commandez en ligne : ${shareBase}`)} target="_blank" rel="noopener noreferrer">
+              <Button asChild variant="ghost" aria-label={t("Partager la boutique")}>
+                <a href={whatsappShareUrl(`${store.name} — ${t("commandez en ligne :")} ${shareBase}`)} target="_blank" rel="noopener noreferrer">
                   <Share2 />
                 </a>
               </Button>
@@ -206,11 +215,11 @@ export function Storefront({ store, products, categories, shareBase }: { store: 
         <div className="mx-auto flex max-w-5xl flex-col gap-2 px-4 py-2.5 sm:flex-row sm:items-center">
           <div className="relative sm:w-72">
             <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-ink-4" />
-            <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Rechercher un produit" className="pl-8" aria-label="Rechercher un produit" />
+            <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={t("Rechercher un produit")} className="pl-8" aria-label={t("Rechercher un produit")} />
           </div>
           {usedCategories.length ? (
             <div className="-mx-1 flex gap-1 overflow-x-auto px-1 pb-0.5">
-              {[{ id: null as string | null, name: "Tout" }, ...usedCategories].map((c) => (
+              {[{ id: null as string | null, name: t("Tout") }, ...usedCategories].map((c) => (
                 <button
                   key={c.id ?? "all"}
                   type="button"
@@ -228,8 +237,8 @@ export function Storefront({ store, products, categories, shareBase }: { store: 
       <main className="mx-auto max-w-5xl px-4 py-5">
         {visible.length === 0 ? (
           <div className="rounded-lg border border-line bg-surface px-6 py-12 text-center">
-            <p className="text-[14px] font-medium">{products.length ? "Aucun produit ne correspond" : "Catalogue en préparation"}</p>
-            <p className="mt-1 text-[13px] text-ink-3">{products.length ? "Essayez une autre recherche." : "Contactez la boutique sur WhatsApp pour commander."}</p>
+            <p className="text-[14px] font-medium">{products.length ? t("Aucun produit ne correspond") : t("Catalogue en préparation")}</p>
+            <p className="mt-1 text-[13px] text-ink-3">{products.length ? t("Essayez une autre recherche.") : t("Contactez la boutique sur WhatsApp pour commander.")}</p>
           </div>
         ) : (
           <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
@@ -248,14 +257,14 @@ export function Storefront({ store, products, categories, shareBase }: { store: 
                           <ImageOff className="size-6 text-ink-4" />
                         </div>
                       )}
-                      {out ? <span className="absolute top-2 left-2 rounded-xs bg-ink/85 px-1.5 py-0.5 text-[11px] font-medium text-white">Épuisé</span> : null}
-                      {!out && p.promo_price !== null ? <span className="absolute top-2 left-2 rounded-xs bg-danger px-1.5 py-0.5 text-[11px] font-medium text-white">Promo</span> : null}
+                      {out ? <span className="absolute top-2 left-2 rounded-xs bg-ink/85 px-1.5 py-0.5 text-[11px] font-medium text-white">{t("Épuisé")}</span> : null}
+                      {!out && p.promo_price !== null ? <span className="absolute top-2 left-2 rounded-xs bg-danger px-1.5 py-0.5 text-[11px] font-medium text-white">{t("Promo")}</span> : null}
                     </div>
                     <div className="flex flex-1 flex-col p-3">
                       <p className="line-clamp-2 text-[13.5px] font-medium text-ink">{p.name}</p>
                       <p className="mt-1 text-[14px] font-semibold tabular">
-                        {formatMoney(p.promo_price ?? p.price, store.currency)}
-                        {p.promo_price !== null ? <span className="ml-1.5 text-xs font-normal text-ink-4 line-through">{formatMoney(p.price, store.currency)}</span> : null}
+                        {f.money(p.promo_price ?? p.price, store.currency)}
+                        {p.promo_price !== null ? <span className="ml-1.5 text-xs font-normal text-ink-4 line-through">{f.money(p.price, store.currency)}</span> : null}
                       </p>
                     </div>
                   </button>
@@ -267,32 +276,35 @@ export function Storefront({ store, products, categories, shareBase }: { store: 
 
         {store.delivery_terms || store.default_delivery_fee > 0 ? (
           <section className="mt-8 rounded-lg border border-line bg-surface p-5 text-[13.5px]">
-            <h2 className="font-semibold">Livraison</h2>
-            {store.default_delivery_fee > 0 ? <p className="mt-1 text-ink-2">Frais de livraison : {formatMoney(store.default_delivery_fee, store.currency)}</p> : null}
+            <h2 className="font-semibold">{t("Livraison")}</h2>
+            {store.default_delivery_fee > 0 ? <p className="mt-1 text-ink-2">{t("Frais de livraison :")} {f.money(store.default_delivery_fee, store.currency)}</p> : null}
             {store.delivery_terms ? <p className="mt-1 whitespace-pre-line text-ink-3">{store.delivery_terms}</p> : null}
           </section>
         ) : null}
         {store.opening_hours.length === 7 ? (
           <section className="mt-4 rounded-lg border border-line bg-surface p-5 text-[13.5px]">
-            <h2 className="font-semibold">Horaires</h2>
+            <h2 className="font-semibold">{t("Horaires")}</h2>
             <ul className="mt-2 grid gap-1 sm:grid-cols-2">
               {store.opening_hours.map((h) => (
                 <li key={h.day} className="flex justify-between gap-4 text-ink-2">
-                  <span className="capitalize">{DAYS[h.day - 1]}</span>
-                  <span className="tabular text-ink-3">{h.closed ? "Fermé" : `${h.open} – ${h.close}`}</span>
+                  <span className="capitalize">{new Intl.DateTimeFormat(locale === "en" ? "en-GB" : "fr-FR", { weekday: "long", timeZone: "UTC" }).format(new Date(Date.UTC(2024, 0, h.day)))}</span>
+                  <span className="tabular text-ink-3">{h.closed ? t("Fermé") : `${h.open} – ${h.close}`}</span>
                 </li>
               ))}
             </ul>
           </section>
         ) : null}
-        <p className="mt-8 text-center text-xs text-ink-4">Boutique propulsée par {env.appName}</p>
+        <div className="mt-8 flex flex-col items-center gap-3">
+          <LanguageSwitcher compact />
+          <p className="text-center text-xs text-ink-4">{t("Boutique propulsée par {app}", { app: env.appName })}</p>
+        </div>
       </main>
 
       {count > 0 ? (
         <div className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-surface/95 p-3 pb-[calc(12px+env(safe-area-inset-bottom))] backdrop-blur-sm">
           <div className="mx-auto max-w-5xl">
             <Button size="lg" variant="primary" block onClick={() => setCartOpen(true)}>
-              <ShoppingBag /> Voir le panier · {count} article{count > 1 ? "s" : ""} · {formatMoney(subtotal, store.currency)}
+              <ShoppingBag /> {t("Voir le panier")} · {tn(count, "{n} article", "{n} articles")} · {f.money(subtotal, store.currency)}
             </Button>
           </div>
         </div>
@@ -317,6 +329,8 @@ function ProductDialog({
   onClose: () => void;
   onAdd: (productId: string, variantId: string | null, qty: number) => void;
 }) {
+  const i18n = useI18n();
+  const { t, f } = i18n;
   const [variant, setVariant] = React.useState<string | null>(null);
   const [qty, setQty] = React.useState(1);
   const [imgIndex, setImgIndex] = React.useState(0);
@@ -360,12 +374,12 @@ function ProductDialog({
           </div>
           <div className="flex flex-col gap-4">
             <p className="text-xl font-semibold tabular">
-              {formatMoney(price, store.currency)}
-              {product.promo_price !== null && !variant ? <span className="ml-2 text-sm font-normal text-ink-4 line-through">{formatMoney(product.price, store.currency)}</span> : null}
+              {f.money(price, store.currency)}
+              {product.promo_price !== null && !variant ? <span className="ml-2 text-sm font-normal text-ink-4 line-through">{f.money(product.price, store.currency)}</span> : null}
             </p>
             {product.description ? <p className="text-[14px] leading-relaxed whitespace-pre-line text-ink-2">{product.description}</p> : null}
             {product.variants.length ? (
-              <Field label="Choix" htmlFor="variant">
+              <Field label={t("Choix")} htmlFor="variant">
                 <div className="flex flex-wrap gap-2">
                   {product.variants.map((v) => (
                     <button
@@ -384,17 +398,17 @@ function ProductDialog({
                 </div>
               </Field>
             ) : null}
-            {product.track_stock && !out ? <p className="text-xs text-ink-3">{product.stock} en stock</p> : null}
+            {product.track_stock && !out ? <p className="text-xs text-ink-3">{t("{n} en stock", { n: product.stock ?? 0 })}</p> : null}
             {out ? (
-              <Notice tone="neutral">Produit épuisé pour le moment.</Notice>
+              <Notice tone="neutral">{t("Produit épuisé pour le moment.")}</Notice>
             ) : (
               <div className="flex items-center gap-3">
                 <div className="flex items-center rounded-md border border-line-strong">
-                  <button type="button" className="flex size-10 items-center justify-center text-ink-2" onClick={() => setQty((q) => Math.max(1, q - 1))} aria-label="Moins">
+                  <button type="button" className="flex size-10 items-center justify-center text-ink-2" onClick={() => setQty((q) => Math.max(1, q - 1))} aria-label={t("Moins")}>
                     <Minus className="size-4" />
                   </button>
                   <span className="w-8 text-center tabular">{qty}</span>
-                  <button type="button" className="flex size-10 items-center justify-center text-ink-2" onClick={() => setQty((q) => Math.min(maxQty, q + 1))} aria-label="Plus">
+                  <button type="button" className="flex size-10 items-center justify-center text-ink-2" onClick={() => setQty((q) => Math.min(maxQty, q + 1))} aria-label={t("Plus")}>
                     <Plus className="size-4" />
                   </button>
                 </div>
@@ -408,13 +422,13 @@ function ProductDialog({
                     onClose();
                   }}
                 >
-                  Ajouter · {formatMoney(price * qty, store.currency)}
+                  {t("Ajouter")} · {f.money(price * qty, store.currency)}
                 </Button>
               </div>
             )}
             <Button asChild variant="whatsapp" size="sm" className="self-start">
-              <a href={whatsappShareUrl(waMessages.productShare({ storeName: store.name, productName: product.name, price, currency: store.currency, url }))} target="_blank" rel="noopener noreferrer">
-                <Share2 /> Partager sur WhatsApp
+              <a href={whatsappShareUrl(waMessages(i18n).productShare({ storeName: store.name, productName: product.name, price, currency: store.currency, url }))} target="_blank" rel="noopener noreferrer">
+                <Share2 /> {t("Partager sur WhatsApp")}
               </a>
             </Button>
           </div>
@@ -441,6 +455,8 @@ function CartDialog({
   byId: Map<string, ShopProduct>;
   subtotal: number;
 }) {
+  const i18n = useI18n();
+  const { t, f } = i18n;
   const [step, setStep] = React.useState<"cart" | "checkout" | "done">("cart");
   const [form, setForm] = React.useState({ name: "", phone: "", address: "", instructions: "" });
   const [mode, setMode] = React.useState<"delivery" | "pickup">("delivery");
@@ -495,32 +511,32 @@ function CartDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        title={step === "cart" ? "Votre panier" : step === "checkout" ? "Finaliser la commande" : "Commande envoyée"}
+        title={step === "cart" ? t("Votre panier") : step === "checkout" ? t("Finaliser la commande") : t("Commande envoyée")}
         size="md"
         footer={
           step === "cart" ? (
             <Button size="lg" variant="primary" block disabled={!cart.length} onClick={() => setStep("checkout")}>
-              Commander · {formatMoney(subtotal, store.currency)}
+              {t("Commander")} · {f.money(subtotal, store.currency)}
             </Button>
           ) : step === "checkout" ? (
             <div className="flex w-full gap-2">
               <Button variant="ghost" onClick={() => setStep("cart")}>
-                Retour
+                {t("Retour")}
               </Button>
               <Button size="lg" variant="primary" className="flex-1" loading={pending} onClick={submit}>
-                Envoyer la commande · {formatMoney(total, store.currency)}
+                {t("Envoyer la commande")} · {f.money(total, store.currency)}
               </Button>
             </div>
           ) : (
             <Button variant="secondary" block onClick={() => onOpenChange(false)}>
-              Continuer mes achats
+              {t("Continuer mes achats")}
             </Button>
           )
         }
       >
         {step === "cart" ? (
           cart.length === 0 ? (
-            <p className="py-6 text-center text-[13.5px] text-ink-3">Votre panier est vide.</p>
+            <p className="py-6 text-center text-[13.5px] text-ink-3">{t("Votre panier est vide.")}</p>
           ) : (
             <ul className="divide-y divide-line">
               {cart.map((l) => {
@@ -536,18 +552,18 @@ function CartDialog({
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-[13.5px] font-medium">{p.name}</p>
                       {v ? <p className="text-xs text-ink-3">{v.name}</p> : null}
-                      <p className="text-[13px] tabular">{formatMoney(unitPrice(p, l.variant_id) * l.quantity, store.currency)}</p>
+                      <p className="text-[13px] tabular">{f.money(unitPrice(p, l.variant_id) * l.quantity, store.currency)}</p>
                     </div>
                     <div className="flex items-center rounded-md border border-line-strong">
-                      <button type="button" className="flex size-8 items-center justify-center" aria-label="Moins" onClick={() => setCart((c) => c.map((x) => (x.key === l.key ? { ...x, quantity: Math.max(1, x.quantity - 1) } : x)))}>
+                      <button type="button" className="flex size-8 items-center justify-center" aria-label={t("Moins")} onClick={() => setCart((c) => c.map((x) => (x.key === l.key ? { ...x, quantity: Math.max(1, x.quantity - 1) } : x)))}>
                         <Minus className="size-3.5" />
                       </button>
                       <span className="w-6 text-center text-[13px] tabular">{l.quantity}</span>
-                      <button type="button" className="flex size-8 items-center justify-center" aria-label="Plus" onClick={() => setCart((c) => c.map((x) => (x.key === l.key ? { ...x, quantity: Math.min(99, x.quantity + 1) } : x)))}>
+                      <button type="button" className="flex size-8 items-center justify-center" aria-label={t("Plus")} onClick={() => setCart((c) => c.map((x) => (x.key === l.key ? { ...x, quantity: Math.min(99, x.quantity + 1) } : x)))}>
                         <Plus className="size-3.5" />
                       </button>
                     </div>
-                    <button type="button" className="p-1 text-ink-4 hover:text-danger-ink" aria-label="Retirer" onClick={() => setCart((c) => c.filter((x) => x.key !== l.key))}>
+                    <button type="button" className="p-1 text-ink-4 hover:text-danger-ink" aria-label={t("Retirer")} onClick={() => setCart((c) => c.filter((x) => x.key !== l.key))}>
                       <Trash2 className="size-4" />
                     </button>
                   </li>
@@ -557,26 +573,26 @@ function CartDialog({
           )
         ) : step === "checkout" ? (
           <div className="flex flex-col gap-4">
-            {error ? <Notice tone="danger">{error}</Notice> : null}
+            {error ? <Notice tone="danger">{t(error)}</Notice> : null}
             <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Votre nom" htmlFor="co-name" error={errors.name}>
+              <Field label={t("Votre nom")} htmlFor="co-name" error={errors.name}>
                 <Input id="co-name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} autoComplete="name" />
               </Field>
-              <Field label="Téléphone (WhatsApp)" htmlFor="co-phone" error={errors.phone}>
+              <Field label={t("Téléphone (WhatsApp)")} htmlFor="co-phone" error={errors.phone}>
                 <Input id="co-phone" type="tel" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} autoComplete="tel" />
               </Field>
             </div>
             <div className="grid grid-cols-2 gap-2">
               {(["delivery", "pickup"] as const).map((m) => (
                 <button key={m} type="button" onClick={() => setMode(m)} className={cn("rounded-md border px-3 py-2.5 text-left text-[13px]", mode === m ? "border-ink shadow-[inset_0_0_0_1px_var(--color-ink)]" : "border-line-strong")}>
-                  <span className="block font-medium">{m === "delivery" ? "Livraison" : "Retrait en boutique"}</span>
-                  <span className="text-xs text-ink-3">{m === "delivery" ? (store.default_delivery_fee ? formatMoney(store.default_delivery_fee, store.currency) : "Frais confirmés par la boutique") : "Gratuit"}</span>
+                  <span className="block font-medium">{m === "delivery" ? t("Livraison") : t("Retrait en boutique")}</span>
+                  <span className="text-xs text-ink-3">{m === "delivery" ? (store.default_delivery_fee ? f.money(store.default_delivery_fee, store.currency) : t("Frais confirmés par la boutique")) : t("Gratuit")}</span>
                 </button>
               ))}
             </div>
             {mode === "delivery" ? (
               <>
-                <Field label="Adresse de livraison" htmlFor="co-address" error={errors.address} hint="Quartier, rue, repère.">
+                <Field label={t("Adresse de livraison")} htmlFor="co-address" error={errors.address} hint={t("Quartier, rue, repère.")}>
                   <Input id="co-address" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} autoComplete="street-address" />
                 </Field>
                 <div className="flex items-center gap-2 text-[13px]">
@@ -586,7 +602,7 @@ function CartDialog({
                     variant="secondary"
                     loading={locating}
                     onClick={() => {
-                      if (!("geolocation" in navigator)) return toast.error("Localisation indisponible.");
+                      if (!("geolocation" in navigator)) return toast.error(t("Localisation indisponible."));
                       setLocating(true);
                       navigator.geolocation.getCurrentPosition(
                         (p) => {
@@ -595,69 +611,69 @@ function CartDialog({
                         },
                         () => {
                           setLocating(false);
-                          toast.error("Position non obtenue. L'adresse suffit.");
+                          toast.error(t("Position non obtenue. L'adresse suffit."));
                         },
                         { enableHighAccuracy: true, timeout: 15000 },
                       );
                     }}
                   >
-                    <LocateFixed /> {point ? "Position enregistrée" : "Partager ma position"}
+                    <LocateFixed /> {point ? t("Position enregistrée") : t("Partager ma position")}
                   </Button>
                   {point ? (
-                    <button type="button" className="text-ink-3 hover:text-ink" onClick={() => setPoint(null)} aria-label="Retirer la position">
+                    <button type="button" className="text-ink-3 hover:text-ink" onClick={() => setPoint(null)} aria-label={t("Retirer la position")}>
                       <X className="size-4" />
                     </button>
                   ) : (
-                    <span className="text-xs text-ink-3">Facultatif, aide le livreur.</span>
+                    <span className="text-xs text-ink-3">{t("Facultatif, aide le livreur.")}</span>
                   )}
                 </div>
               </>
             ) : null}
-            <Field label="Paiement" htmlFor="co-pay">
+            <Field label={t("Paiement")} htmlFor="co-pay">
               <NativeSelect id="co-pay" value={method} onChange={(e) => setMethod(e.target.value as PaymentMethod)}>
                 {methods.map((m) => (
                   <option key={m.method} value={m.method}>
-                    {m.label}
+                    {t(m.label)}
                   </option>
                 ))}
               </NativeSelect>
             </Field>
-            <p className="-mt-2 text-xs text-ink-3">{methods.find((m) => m.method === method)?.description}</p>
-            <Field label="Précisions" htmlFor="co-instr" optional>
+            <p className="-mt-2 text-xs text-ink-3">{t(methods.find((m) => m.method === method)?.description ?? "")}</p>
+            <Field label={t("Précisions")} htmlFor="co-instr" optional>
               <Textarea id="co-instr" rows={2} value={form.instructions} onChange={(e) => setForm({ ...form, instructions: e.target.value })} />
             </Field>
             <dl className="space-y-1 border-t border-line pt-3 text-[13.5px]">
               <div className="flex justify-between">
-                <dt className="text-ink-3">Articles</dt>
-                <dd className="tabular">{formatMoney(subtotal, store.currency)}</dd>
+                <dt className="text-ink-3">{t("Articles")}</dt>
+                <dd className="tabular">{f.money(subtotal, store.currency)}</dd>
               </div>
               <div className="flex justify-between">
-                <dt className="text-ink-3">Livraison</dt>
-                <dd className="tabular">{formatMoney(fee, store.currency)}</dd>
+                <dt className="text-ink-3">{t("Livraison")}</dt>
+                <dd className="tabular">{f.money(fee, store.currency)}</dd>
               </div>
               <div className="flex justify-between text-[15px] font-semibold">
-                <dt>Total</dt>
-                <dd className="tabular">{formatMoney(total, store.currency)}</dd>
+                <dt>{t("Total")}</dt>
+                <dd className="tabular">{f.money(total, store.currency)}</dd>
               </div>
             </dl>
           </div>
         ) : result ? (
           <div className="flex flex-col items-start gap-3">
             <CheckCircle2 className="size-8 text-success" />
-            <p className="text-[15px] font-semibold">Commande {result.reference} reçue</p>
+            <p className="text-[15px] font-semibold">{t("Commande {ref} reçue", { ref: result.reference })}</p>
             <p className="text-[13.5px] text-ink-2">
-              {store.name} va confirmer votre commande. Total : <span className="font-medium tabular">{formatMoney(result.total, store.currency)}</span>.
+              {t("{store} va confirmer votre commande. Total :", { store: store.name })} <span className="font-medium tabular">{f.money(result.total, store.currency)}</span>.
             </p>
             {contact ? (
               <>
-                <p className="text-[13px] text-ink-3">Pour accélérer la confirmation, envoyez le récapitulatif à la boutique sur WhatsApp :</p>
+                <p className="text-[13px] text-ink-3">{t("Pour accélérer la confirmation, envoyez le récapitulatif à la boutique sur WhatsApp :")}</p>
                 <Button asChild variant="whatsapp">
                   <a
-                    href={whatsappUrl(contact, waMessages.storefrontOrder({ storeName: store.name, reference: result.reference, customerName: form.name, items: result.lines, total: result.total, currency: store.currency, mode, address: form.address })) ?? "#"}
+                    href={whatsappUrl(contact, waMessages(i18n).storefrontOrder({ storeName: store.name, reference: result.reference, customerName: form.name, items: result.lines, total: result.total, currency: store.currency, mode, address: form.address })) ?? "#"}
                     target="_blank"
                     rel="noopener noreferrer"
                   >
-                    <MessageCircle /> Envoyer sur WhatsApp
+                    <MessageCircle /> {t("Envoyer sur WhatsApp")}
                   </a>
                 </Button>
               </>

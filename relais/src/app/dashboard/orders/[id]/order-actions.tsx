@@ -1,5 +1,6 @@
 "use client";
 
+import { useI18n } from "@/i18n/client";
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -33,6 +34,7 @@ export function OrderStatusActions({
   hasActiveJob: boolean;
   deliveryMode: "delivery" | "pickup";
 }) {
+  const { t } = useI18n();
   const router = useRouter();
   const [pending, setPending] = React.useState<OrderStatus | null>(null);
   const [cancelOpen, setCancelOpen] = React.useState(false);
@@ -54,10 +56,10 @@ export function OrderStatusActions({
     const res = await setOrderStatusAction(orderId, next, note);
     setPending(null);
     if (!res.ok) {
-      toast.error(res.error);
+      toast.error(t(res.error));
       return false;
     }
-    toast.success("Statut mis à jour.");
+    toast.success(t("Statut mis à jour."));
     router.refresh();
     return true;
   }
@@ -66,28 +68,28 @@ export function OrderStatusActions({
     <>
       {primary ? (
         <Button variant="primary" loading={pending === primary} onClick={() => run(primary)}>
-          {deliveryMode === "pickup" && primary === "delivered" ? "Marquer retirée" : ORDER_ACTION_LABEL[primary]}
+          {deliveryMode === "pickup" && primary === "delivered" ? t("Marquer retirée") : t(ORDER_ACTION_LABEL[primary] ?? primary)}
         </Button>
       ) : null}
       {others.length || canCancel ? (
         <Dropdown>
           <DropdownTrigger asChild>
             <Button variant="secondary">
-              Statut <ChevronDown />
+              {t("Statut")} <ChevronDown />
             </Button>
           </DropdownTrigger>
           <DropdownContent>
-            <DropdownLabel>Passer à</DropdownLabel>
+            <DropdownLabel>{t("Passer à")}</DropdownLabel>
             {others.map((s) => (
               <DropdownItem key={s} onSelect={() => void run(s)}>
-                {s === "delivered" && deliveryMode === "pickup" ? "Retirée par le client" : ORDER_ACTION_LABEL[s] ?? s}
+                {s === "delivered" && deliveryMode === "pickup" ? t("Retirée par le client") : t(ORDER_ACTION_LABEL[s] ?? s)}
               </DropdownItem>
             ))}
             {canCancel ? (
               <>
                 {others.length ? <DropdownSeparator /> : null}
                 <DropdownItem destructive onSelect={() => setCancelOpen(true)}>
-                  <Ban /> Annuler la commande
+                  <Ban /> {t("Annuler la commande")}
                 </DropdownItem>
               </>
             ) : null}
@@ -96,13 +98,13 @@ export function OrderStatusActions({
       ) : null}
       <Dialog open={cancelOpen} onOpenChange={setCancelOpen}>
         <DialogContent
-          title="Annuler la commande"
-          description="Le stock des articles suivis est restauré. Une course en attente est annulée."
+          title={t("Annuler la commande")}
+          description={t("Le stock des articles suivis est restauré. Une course en attente est annulée.")}
           size="sm"
           footer={
             <>
               <Button variant="ghost" onClick={() => setCancelOpen(false)}>
-                Retour
+                {t("Retour")}
               </Button>
               <Button
                 variant="danger"
@@ -111,13 +113,13 @@ export function OrderStatusActions({
                   if (await run("cancelled", reason)) setCancelOpen(false);
                 }}
               >
-                Annuler la commande
+                {t("Annuler la commande")}
               </Button>
             </>
           }
         >
-          <Field label="Motif" htmlFor="cancel-reason" optional>
-            <Textarea id="cancel-reason" value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Ex. client injoignable, rupture de stock…" />
+          <Field label={t("Motif")} htmlFor="cancel-reason" optional>
+            <Textarea id="cancel-reason" value={reason} onChange={(e) => setReason(e.target.value)} placeholder={t("Ex. client injoignable, rupture de stock…")} />
           </Field>
         </DialogContent>
       </Dialog>

@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
+import { msg } from "@/i18n/msg";
 
 /**
  * Suivi GPS réel du livreur.
@@ -88,7 +89,7 @@ export function CourierLocationProvider({
       });
       sendingRef.current = false;
       if (error) {
-        setLastError(navigator.onLine ? "Envoi de la position impossible, nouvel essai automatique." : "Pas de connexion internet : la position sera envoyée au retour du réseau.");
+        setLastError(navigator.onLine ? msg("Envoi de la position impossible, nouvel essai automatique.") : msg("Pas de connexion internet : la position sera envoyée au retour du réseau."));
         return;
       }
       sentRef.current = Date.now();
@@ -123,7 +124,7 @@ export function CourierLocationProvider({
       watchId.current = null;
     } else {
       setGeo((g) => (g === "tracking" ? g : "error"));
-      setLastError(err.code === err.TIMEOUT ? "Signal GPS faible : recherche de la position…" : "Position indisponible pour le moment.");
+      setLastError(err.code === err.TIMEOUT ? msg("Signal GPS faible : recherche de la position…") : msg("Position indisponible pour le moment."));
     }
   }, []);
 

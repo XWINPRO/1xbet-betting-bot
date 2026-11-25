@@ -1,5 +1,6 @@
 "use server";
 
+import { msg } from "@/i18n/msg";
 import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getStoreContext } from "@/lib/auth";
@@ -34,26 +35,26 @@ export async function searchCustomersAction(q: string): Promise<CustomerOption[]
 export async function saveCustomerAction(id: string | null, input: unknown): Promise<ActionResult<{ id: string }>> {
   const ctx = await getStoreContext();
   const parsed = customerSchema.safeParse(input);
-  if (!parsed.success) return fail("Vérifiez les champs.", zodFieldErrors(parsed.error.issues));
+  if (!parsed.success) return fail(msg("Vérifiez les champs."), zodFieldErrors(parsed.error.issues));
   const supabase = await createSupabaseServerClient();
   const payload = { ...parsed.data, whatsapp: parsed.data.whatsapp ?? parsed.data.phone };
   const res = id
     ? await supabase.from("customers").update(payload).eq("id", id).eq("store_id", ctx.storeId).select("id").single()
     : await supabase.from("customers").insert({ ...payload, store_id: ctx.storeId }).select("id").single();
   if (res.error || !res.data) {
-    const msg = res.error?.code === "23505" ? "Un client existe déjà avec ce numéro." : toUserMessage(res.error);
-    return fail(msg, res.error?.code === "23505" ? { phone: msg } : undefined);
+    const message = res.error?.code === "23505" ? msg("Un client existe déjà avec ce numéro.") : toUserMessage(res.error);
+    return fail(message, res.error?.code === "23505" ? { phone: message } : undefined);
   }
   revalidatePath("/dashboard/customers");
-  return ok({ id: res.data.id }, "Client enregistré.");
+  return ok({ id: res.data.id }, msg("Client enregistré."));
 }
 
 export async function deleteCustomerAction(id: string): Promise<ActionResult> {
   const ctx = await getStoreContext();
-  if (!ctx.isOwner) return fail("Seul le propriétaire peut supprimer un client.");
+  if (!ctx.isOwner) return fail(msg("Seul le propriétaire peut supprimer un client."));
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase.from("customers").delete().eq("id", id).eq("store_id", ctx.storeId);
   if (error) return fail(toUserMessage(error));
   revalidatePath("/dashboard/customers");
-  return ok(null, "Client supprimé.");
+  return ok(null, msg("Client supprimé."));
 }

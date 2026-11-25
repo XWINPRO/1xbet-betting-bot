@@ -1,3 +1,4 @@
+import { msg } from "@/i18n/msg";
 import type { PaymentMethod } from "@/types/domain";
 
 /**
@@ -19,26 +20,26 @@ export type PaymentMethodInfo = {
 export const PAYMENT_METHODS: PaymentMethodInfo[] = [
   {
     method: "cash_on_delivery",
-    label: "Paiement à la livraison",
-    description: "Le livreur encaisse le montant à la remise du colis, puis le remet à la boutique.",
+    label: msg("Paiement à la livraison"),
+    description: msg("Le livreur encaisse le montant à la remise du colis, puis le remet à la boutique."),
     confirmation: "on_delivery",
   },
   {
     method: "orange_money",
-    label: "Orange Money",
-    description: "Le client envoie le montant au numéro marchand ; la boutique confirme la réception manuellement.",
+    label: msg("Orange Money"),
+    description: msg("Le client envoie le montant au numéro marchand ; la boutique confirme la réception manuellement."),
     confirmation: "manual",
   },
   {
     method: "mtn_momo",
-    label: "MTN MoMo",
-    description: "Le client envoie le montant au numéro marchand ; la boutique confirme la réception manuellement.",
+    label: msg("MTN MoMo"),
+    description: msg("Le client envoie le montant au numéro marchand ; la boutique confirme la réception manuellement."),
     confirmation: "manual",
   },
   {
     method: "manual",
-    label: "Virement ou dépôt",
-    description: "Paiement hors plateforme confirmé manuellement.",
+    label: msg("Virement ou dépôt"),
+    description: msg("Paiement hors plateforme confirmé manuellement."),
     confirmation: "manual",
   },
 ];

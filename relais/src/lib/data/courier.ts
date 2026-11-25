@@ -8,10 +8,14 @@ export const getCourierHome = cache(async () => {
   const { viewer, courier } = await requireCourier();
   const supabase = await createSupabaseServerClient();
   const [{ data: full }, { data: jobs }, { data: settings }, { data: stores }] = await Promise.all([
-    supabase.from("couriers").select("*").eq("id", courier.id).single(),
+    supabase
+      .from("couriers")
+      .select("id, user_id, kind, full_name, phone, vehicle_type, vehicle_plate, zone, account_status, availability, last_seen_at, review_note")
+      .eq("id", courier.id)
+      .single(),
     supabase
       .from("delivery_jobs")
-      .select("id, reference, status, source, pickup_name, pickup_address, dropoff_name, dropoff_address, collect_amount, price, currency, offered_at, accepted_at, store_id, stores(name)")
+      .select("id, reference, status, pickup_name, pickup_address, dropoff_name, dropoff_address, collect_amount, currency, offered_at, accepted_at, store_id, stores(name)")
       .eq("courier_id", courier.id)
       .in("status", ["offered", "accepted", "picked_up", "in_transit"])
       .order("offered_at", { ascending: true }),

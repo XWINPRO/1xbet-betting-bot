@@ -1,3 +1,5 @@
+import { getI18n } from "@/i18n/server";
+import type { Metadata } from "next";
 import { requireStorePermission } from "@/lib/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { PageContainer, PageHeader } from "@/components/ui/page";
@@ -5,11 +7,15 @@ import { param } from "@/lib/utils";
 import { OrderForm } from "./order-form";
 import type { ProductVariant } from "@/types/domain";
 
-export const metadata = { title: "Nouvelle commande" };
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getI18n();
+  return { title: t("Nouvelle commande") };
+}
 
 export default async function NewOrderPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const sp = await searchParams;
   const ctx = await requireStorePermission("orders.create");
+  const { t } = await getI18n();
   const supabase = await createSupabaseServerClient();
   const customerId = param(sp.customer);
   const [{ data: products }, { data: store }, customerRes] = await Promise.all([
@@ -29,9 +35,9 @@ export default async function NewOrderPage({ searchParams }: { searchParams: Pro
   return (
     <PageContainer>
       <PageHeader
-        title="Nouvelle commande"
-        description="Saisissez une commande reçue par WhatsApp, téléphone ou en boutique."
-        back={{ href: "/dashboard/orders", label: "Commandes" }}
+        title={t("Nouvelle commande")}
+        description={t("Saisissez une commande reçue par WhatsApp, téléphone ou en boutique.")}
+        back={{ href: "/dashboard/orders", label: t("Commandes") }}
       />
       <OrderForm
         products={(products ?? []).map((p) => ({

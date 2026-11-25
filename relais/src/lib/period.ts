@@ -1,12 +1,13 @@
+import { msg } from "@/i18n/msg";
 import { env } from "@/lib/env";
 
 export type PeriodKey = "today" | "7d" | "30d" | "90d";
 
 export const PERIODS: { key: PeriodKey; label: string; days: number }[] = [
-  { key: "today", label: "Aujourd'hui", days: 1 },
-  { key: "7d", label: "7 jours", days: 7 },
-  { key: "30d", label: "30 jours", days: 30 },
-  { key: "90d", label: "90 jours", days: 90 },
+  { key: "today", label: msg("Aujourd'hui"), days: 1 },
+  { key: "7d", label: msg("7 jours"), days: 7 },
+  { key: "30d", label: msg("30 jours"), days: 30 },
+  { key: "90d", label: msg("90 jours"), days: 90 },
 ];
 
 function zonedParts(date: Date, tz: string) {

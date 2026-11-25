@@ -18,7 +18,8 @@ export type DeliveryJob = Tables<"delivery_jobs">;
 export type DeliveryEvent = Tables<"delivery_events">;
 export type Transaction = Tables<"transactions">;
 export type Claim = Tables<"claims">;
-export type PricingRule = Tables<"pricing_rules">;
+export type Plan = Tables<"plans">;
+export type StoreSubscription = Tables<"store_subscriptions">;
 export type Invitation = Tables<"invitations">;
 
 export type OrderStatus = Enums<"order_status">;
@@ -43,15 +44,14 @@ export type OpeningHoursDay = { day: number; closed: boolean; open: string; clos
 export type TrackingPayload = {
   reference: string;
   status: JobStatus;
-  source: "store_order" | "on_demand";
-  store: { name: string; slug: string | null; logo_path: string | null; phone: string | null } | null;
+  tracking_level: "status" | "live";
+  store: { name: string | null; slug: string | null; logo_path: string | null; phone: string | null };
   order_reference: string | null;
-  pickup: { label: string; address: string; lat: number | null; lng: number | null };
+  pickup: { label: string | null; address: string; lat: number | null; lng: number | null };
   dropoff: { label: string; address: string; lat: number | null; lng: number | null };
   package_type: string | null;
   distance_km: number | null;
   collect_amount: number;
-  price: number | null;
   currency: string;
   payment_method: PaymentMethod;
   courier: { first_name: string; vehicle_type: string | null; phone: string | null } | null;
@@ -64,15 +64,19 @@ export type TrackingPayload = {
   events: { type: string; status: JobStatus | null; at: string }[];
   stale_after_s: number;
   can_confirm: boolean;
-  can_cancel: boolean;
   server_time: string;
 };
 
-export type DeliveryQuote = {
-  distance_km: number;
-  distance_method: "straight_line";
-  price: number;
-  currency: string;
-  rule: string;
-  breakdown: { base_fee: number; per_km_fee: number; distance_fee: number; min_fee: number; surcharge: number; rounding: number };
+/** Réponse de store_plan_info() : plan en vigueur et utilisation. */
+export type PlanInfo = {
+  code: string;
+  tracking: Enums<"tracking_level">;
+  max_couriers: number;
+  max_staff: number;
+  couriers_used: number;
+  staff_used: number;
+  ends_at: string | null;
+  pending: boolean;
 };
+
+export type PaymentDetails = { payee_name: string | null; orange_money: string | null; mtn_momo: string | null };

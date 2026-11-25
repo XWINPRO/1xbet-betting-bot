@@ -1,4 +1,7 @@
+"use client";
+
 import * as React from "react";
+import { useI18n } from "@/i18n/client";
 import { cn } from "@/lib/utils";
 
 export function Label({ className, ...props }: React.ComponentProps<"label">) {
@@ -22,18 +25,19 @@ export function Field({
   className?: string;
   children: React.ReactNode;
 }) {
+  const { t } = useI18n();
   return (
     <div className={cn("flex flex-col gap-1.5", className)}>
       {label ? (
         <Label htmlFor={htmlFor}>
           {label}
-          {optional ? <span className="ml-1 font-normal text-ink-4">facultatif</span> : null}
+          {optional ? <span className="ml-1 font-normal text-ink-4">{t("facultatif")}</span> : null}
         </Label>
       ) : null}
       {children}
       {error ? (
         <p className="text-xs text-danger-ink" role="alert">
-          {error}
+          {t(error)}
         </p>
       ) : hint ? (
         <p className="text-xs text-ink-3">{hint}</p>

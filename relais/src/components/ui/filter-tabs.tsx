@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { useI18n } from "@/i18n/client";
 import { cn } from "@/lib/utils";
 
 /** Onglets de filtre sous forme de liens (état dans l'URL). */
@@ -11,8 +14,9 @@ export function FilterTabs({
   active: string;
   className?: string;
 }) {
+  const { t } = useI18n();
   return (
-    <nav className={cn("-mb-px flex gap-1 overflow-x-auto", className)} aria-label="Filtres">
+    <nav className={cn("-mb-px flex gap-1 overflow-x-auto", className)} aria-label={t("Filtres")}>
       {items.map((item) => {
         const isActive = item.key === active;
         return (

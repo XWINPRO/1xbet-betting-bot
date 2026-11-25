@@ -1,5 +1,6 @@
 "use client";
 
+import { useI18n } from "@/i18n/client";
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -14,7 +15,6 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/switch";
 import { Notice } from "@/components/ui/page";
 import { Panel } from "@/components/ui/panel";
-import { formatMoney } from "@/lib/format";
 import { formatPhone } from "@/lib/phone";
 import { ORDER_SOURCE, PAYMENT_METHOD } from "@/lib/status";
 import type { LatLng } from "@/lib/geo";
@@ -30,6 +30,7 @@ type Props = {
 };
 
 export function OrderForm({ products, currency, defaultFee, acceptedMethods, initialCustomer }: Props) {
+  const { t, f } = useI18n();
   const router = useRouter();
   const [pending, startTransition] = React.useTransition();
   const [errors, setErrors] = React.useState<Record<string, string>>({});
@@ -94,7 +95,7 @@ export function OrderForm({ products, currency, defaultFee, acceptedMethods, ini
       items: lines.map((l) => ({ product_id: l.product_id, variant_id: l.variant_id, name: l.name, unit_price: l.unit_price, quantity: l.quantity })),
     };
     if (mode === "existing" && !customer) {
-      setErrors({ customer: "Sélectionnez un client ou créez-en un nouveau." });
+      setErrors({ customer: t("Sélectionnez un client ou créez-en un nouveau.") });
       return;
     }
     startTransition(async () => {
@@ -105,7 +106,7 @@ export function OrderForm({ products, currency, defaultFee, acceptedMethods, ini
         window.scrollTo({ top: 0, behavior: "smooth" });
         return;
       }
-      toast.success(`Commande ${res.data.reference} créée.`);
+      toast.success(t("Commande {ref} créée.", { ref: res.data.reference }));
       router.push(`/dashboard/orders/${res.data.id}`);
     });
   }
@@ -113,8 +114,8 @@ export function OrderForm({ products, currency, defaultFee, acceptedMethods, ini
   return (
     <form onSubmit={submit} className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]" noValidate>
       <Panel className="px-5 sm:px-7">
-        {formError ? <Notice tone="danger" className="mt-5">{formError}</Notice> : null}
-        <FormSection title="Client" description="Recherchez un client existant ou saisissez un nouveau contact.">
+        {formError ? <Notice tone="danger" className="mt-5">{t(formError)}</Notice> : null}
+        <FormSection title={t("Client")} description={t("Recherchez un client existant ou saisissez un nouveau contact.")}>
           <div className="inline-flex w-fit rounded-md border border-line bg-subtle p-0.5">
             {(["existing", "new"] as const).map((m) => (
               <button
@@ -123,7 +124,7 @@ export function OrderForm({ products, currency, defaultFee, acceptedMethods, ini
                 onClick={() => setMode(m)}
                 className={cn("h-7 rounded-sm px-3 text-[13px] font-medium", mode === m ? "bg-surface text-ink shadow-xs" : "text-ink-3 hover:text-ink")}
               >
-                {m === "existing" ? "Client existant" : "Nouveau client"}
+                {m === "existing" ? t("Client existant") : t("Nouveau client")}
               </button>
             ))}
           </div>
@@ -138,7 +139,7 @@ export function OrderForm({ products, currency, defaultFee, acceptedMethods, ini
                     {customer.address ? ` · ${customer.address}` : ""}
                   </p>
                 </div>
-                <Button type="button" size="icon-sm" variant="ghost" aria-label="Changer de client" onClick={() => setCustomer(null)}>
+                <Button type="button" size="icon-sm" variant="ghost" aria-label={t("Changer de client")} onClick={() => setCustomer(null)}>
                   <X />
                 </Button>
               </div>
@@ -146,10 +147,10 @@ export function OrderForm({ products, currency, defaultFee, acceptedMethods, ini
               <div>
                 <div className="relative">
                   <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-ink-4" />
-                  <Input value={customerQuery} onChange={(e) => setCustomerQuery(e.target.value)} placeholder="Nom ou téléphone" className="pl-8" aria-invalid={Boolean(errors.customer)} />
+                  <Input value={customerQuery} onChange={(e) => setCustomerQuery(e.target.value)} placeholder={t("Nom ou téléphone")} className="pl-8" aria-invalid={Boolean(errors.customer)} />
                 </div>
                 <ul className="mt-2 divide-y divide-line overflow-hidden rounded-md border border-line">
-                  {results.length === 0 ? <li className="px-3 py-2.5 text-[13px] text-ink-3">Aucun client trouvé.</li> : null}
+                  {results.length === 0 ? <li className="px-3 py-2.5 text-[13px] text-ink-3">{t("Aucun client trouvé.")}</li> : null}
                   {results.map((c) => (
                     <li key={c.id}>
                       <button type="button" onClick={() => pickCustomer(c)} className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-[13px] hover:bg-subtle">
@@ -164,21 +165,21 @@ export function OrderForm({ products, currency, defaultFee, acceptedMethods, ini
             )
           ) : (
             <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Nom" htmlFor="c-name" error={errors["customer.name"]}>
+              <Field label={t("Nom")} htmlFor="c-name" error={errors["customer.name"]}>
                 <Input id="c-name" value={newCustomer.name} onChange={(e) => setNewCustomer((v) => ({ ...v, name: e.target.value }))} aria-invalid={Boolean(errors["customer.name"])} />
               </Field>
-              <Field label="Téléphone / WhatsApp" htmlFor="c-phone" error={errors["customer.phone"]}>
+              <Field label={t("Téléphone / WhatsApp")} htmlFor="c-phone" error={errors["customer.phone"]}>
                 <Input id="c-phone" type="tel" value={newCustomer.phone} onChange={(e) => setNewCustomer((v) => ({ ...v, phone: e.target.value }))} aria-invalid={Boolean(errors["customer.phone"])} />
               </Field>
             </div>
           )}
         </FormSection>
 
-        <FormSection title="Articles" description="Le prix catalogue est proposé ; vous pouvez l'ajuster (prix négocié).">
+        <FormSection title={t("Articles")} description={t("Le prix catalogue est proposé ; vous pouvez l'ajuster (prix négocié).")}>
           <ItemEditor products={products} lines={lines} onChange={setLines} currency={currency} error={errors.items} />
         </FormSection>
 
-        <FormSection title="Livraison">
+        <FormSection title={t("Livraison")}>
           <div className="inline-flex w-fit rounded-md border border-line bg-subtle p-0.5">
             {(["delivery", "pickup"] as const).map((m) => (
               <button
@@ -187,72 +188,72 @@ export function OrderForm({ products, currency, defaultFee, acceptedMethods, ini
                 onClick={() => setDeliveryMode(m)}
                 className={cn("h-7 rounded-sm px-3 text-[13px] font-medium", deliveryMode === m ? "bg-surface text-ink shadow-xs" : "text-ink-3 hover:text-ink")}
               >
-                {m === "delivery" ? "Livraison" : "Retrait en boutique"}
+                {m === "delivery" ? t("Livraison") : t("Retrait en boutique")}
               </button>
             ))}
           </div>
           {deliveryMode === "delivery" ? (
             <>
-              <Field label="Adresse de livraison" htmlFor="address" error={errors.delivery_address} hint="Quartier, rue, point de repère.">
+              <Field label={t("Adresse de livraison")} htmlFor="address" error={errors.delivery_address} hint={t("Quartier, rue, point de repère.")}>
                 <Input id="address" value={address} onChange={(e) => setAddress(e.target.value)} aria-invalid={Boolean(errors.delivery_address)} />
               </Field>
-              <Field label="Position exacte" optional hint="Permet au livreur de naviguer directement vers le client.">
+              <Field label={t("Position exacte")} optional hint={t("Permet au livreur de naviguer directement vers le client.")}>
                 <LocationPicker value={point} onChange={setPoint} onAddress={(label) => !address && setAddress(label)} kind="dropoff" height={220} />
               </Field>
-              <Field label="Frais de livraison" htmlFor="fee" className="sm:max-w-[220px]">
+              <Field label={t("Frais de livraison")} htmlFor="fee" className="sm:max-w-[220px]">
                 <InputGroup id="fee" type="number" min={0} step={100} suffix="FCFA" value={fee} onChange={(e) => setFee(e.target.value)} />
               </Field>
             </>
           ) : (
-            <p className="text-[13px] text-ink-3">Le client récupère sa commande à la boutique : aucune course n&apos;est créée.</p>
+            <p className="text-[13px] text-ink-3">{t("Le client récupère sa commande à la boutique : aucune course n'est créée.")}</p>
           )}
         </FormSection>
 
-        <FormSection title="Paiement" description="Aucun paiement n'est débité automatiquement : les montants sont confirmés manuellement.">
+        <FormSection title={t("Paiement")} description={t("Aucun paiement n'est débité automatiquement : les montants sont confirmés manuellement.")}>
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Moyen de paiement" htmlFor="method">
+            <Field label={t("Moyen de paiement")} htmlFor="method">
               <NativeSelect id="method" value={method} onChange={(e) => setMethod(e.target.value as PaymentMethod)}>
                 {(Object.keys(PAYMENT_METHOD) as PaymentMethod[]).map((m) => (
                   <option key={m} value={m}>
-                    {PAYMENT_METHOD[m]}
+                    {t(PAYMENT_METHOD[m])}
                   </option>
                 ))}
               </NativeSelect>
             </Field>
-            <Field label="Remise" htmlFor="discount" optional>
+            <Field label={t("Remise")} htmlFor="discount" optional>
               <InputGroup id="discount" type="number" min={0} step={100} suffix="FCFA" value={discount} onChange={(e) => setDiscount(e.target.value)} />
             </Field>
           </div>
           <label className="flex items-center gap-2.5 text-[13.5px] text-ink">
             <Checkbox checked={markPaid} onCheckedChange={(v) => setMarkPaid(v === true)} />
-            Le client a déjà payé la totalité ({formatMoney(total, currency)})
+            {t("Le client a déjà payé la totalité ({amount})", { amount: f.money(total, currency) })}
           </label>
         </FormSection>
 
-        <FormSection title="Origine et notes">
+        <FormSection title={t("Origine et notes")}>
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Reçue via" htmlFor="source">
+            <Field label={t("Reçue via")} htmlFor="source">
               <NativeSelect id="source" value={source} onChange={(e) => setSource(e.target.value as keyof typeof ORDER_SOURCE)}>
                 {Object.entries(ORDER_SOURCE)
                   .filter(([k]) => k !== "storefront")
                   .map(([k, label]) => (
                     <option key={k} value={k}>
-                      {label}
+                      {t(label)}
                     </option>
                   ))}
               </NativeSelect>
             </Field>
-            <Field label="Statut initial" htmlFor="status">
+            <Field label={t("Statut initial")} htmlFor="status">
               <NativeSelect id="status" value={status} onChange={(e) => setStatus(e.target.value as "new" | "confirmed")}>
-                <option value="confirmed">Confirmée</option>
-                <option value="new">Nouvelle (à confirmer)</option>
+                <option value="confirmed">{t("Confirmée")}</option>
+                <option value="new">{t("Nouvelle (à confirmer)")}</option>
               </NativeSelect>
             </Field>
           </div>
-          <Field label="Instructions de livraison" htmlFor="instructions" optional hint="Visibles par le livreur.">
+          <Field label={t("Instructions de livraison")} htmlFor="instructions" optional hint={t("Visibles par le livreur.")}>
             <Textarea id="instructions" value={instructions} onChange={(e) => setInstructions(e.target.value)} rows={2} />
           </Field>
-          <Field label="Note interne" htmlFor="internal" optional hint="Visible uniquement par l'équipe de la boutique.">
+          <Field label={t("Note interne")} htmlFor="internal" optional hint={t("Visible uniquement par l'équipe de la boutique.")}>
             <Textarea id="internal" value={internalNote} onChange={(e) => setInternalNote(e.target.value)} rows={2} />
           </Field>
         </FormSection>
@@ -261,33 +262,33 @@ export function OrderForm({ products, currency, defaultFee, acceptedMethods, ini
       <aside className="lg:sticky lg:top-[72px] lg:self-start">
         <Panel>
           <div className="border-b border-line px-5 py-3.5">
-            <h2 className="text-[14px] font-semibold">Récapitulatif</h2>
+            <h2 className="text-[14px] font-semibold">{t("Récapitulatif")}</h2>
           </div>
           <dl className="space-y-2 px-5 py-4 text-[13.5px]">
             <div className="flex justify-between">
-              <dt className="text-ink-3">Articles ({lines.reduce((s, l) => s + l.quantity, 0)})</dt>
-              <dd className="tabular">{formatMoney(subtotal, currency)}</dd>
+              <dt className="text-ink-3">{t("Articles ({n})", { n: lines.reduce((s, l) => s + l.quantity, 0) })}</dt>
+              <dd className="tabular">{f.money(subtotal, currency)}</dd>
             </div>
             <div className="flex justify-between">
-              <dt className="text-ink-3">Livraison</dt>
-              <dd className="tabular">{formatMoney(feeValue, currency)}</dd>
+              <dt className="text-ink-3">{t("Livraison")}</dt>
+              <dd className="tabular">{f.money(feeValue, currency)}</dd>
             </div>
             {discountValue > 0 ? (
               <div className="flex justify-between">
-                <dt className="text-ink-3">Remise</dt>
-                <dd className="tabular">− {formatMoney(discountValue, currency)}</dd>
+                <dt className="text-ink-3">{t("Remise")}</dt>
+                <dd className="tabular">− {f.money(discountValue, currency)}</dd>
               </div>
             ) : null}
             <div className="flex justify-between border-t border-line pt-3 text-[15px] font-semibold">
-              <dt>Total</dt>
-              <dd className="tabular">{formatMoney(total, currency)}</dd>
+              <dt>{t("Total")}</dt>
+              <dd className="tabular">{f.money(total, currency)}</dd>
             </div>
           </dl>
           <div className="border-t border-line px-5 py-4">
             <Button type="submit" variant="primary" size="lg" block loading={pending}>
-              Créer la commande
+              {t("Créer la commande")}
             </Button>
-            <p className="mt-2 text-center text-xs text-ink-3">Le stock des produits suivis est déduit automatiquement.</p>
+            <p className="mt-2 text-center text-xs text-ink-3">{t("Le stock des produits suivis est déduit automatiquement.")}</p>
           </div>
         </Panel>
       </aside>

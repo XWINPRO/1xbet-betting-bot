@@ -1,3 +1,4 @@
+import { msg } from "@/i18n/msg";
 import { haversineKm, toLatLng, type LatLng } from "@/lib/geo";
 import { secondsSince } from "@/lib/format";
 import type { BoardCourier, EffectiveCourierStatus } from "@/types/domain";
@@ -35,7 +36,7 @@ const STATUS_BASE: Record<EffectiveCourierStatus, number> = {
 export function rankCouriers(
   couriers: BoardCourier[],
   pickup: LatLng | null,
-  options: { staleAfterSeconds: number; now?: Date },
+  options: { staleAfterSeconds: number; now?: Date; /** false : le plan ne donne pas accès aux positions. */ positions?: boolean },
 ): CourierSuggestion[] {
   const now = options.now ?? new Date();
 
@@ -51,14 +52,14 @@ export function rankCouriers(
     if (pickup && position) {
       distanceKm = haversineKm(position, pickup);
       score -= Math.min(distanceKm * 4, 45);
-    } else if (!position) {
+    } else if (!position && options.positions !== false) {
       score -= 12;
-      reasons.push("Position inconnue");
+      reasons.push(msg("Position inconnue"));
     }
 
-    if (gpsAgeSeconds !== null && gpsAgeSeconds > options.staleAfterSeconds) {
+    if (options.positions !== false && gpsAgeSeconds !== null && gpsAgeSeconds > options.staleAfterSeconds) {
       score -= 10;
-      reasons.push("Position obsolète");
+      reasons.push(msg("Position obsolète"));
     }
 
     const active = courier.active_jobs ?? 0;
@@ -71,7 +72,7 @@ export function rankCouriers(
     if (pickup && zoneCenter && courier.zone_radius_km) {
       const inZone = haversineKm(zoneCenter, pickup) <= Number(courier.zone_radius_km);
       score += inZone ? 10 : -5;
-      reasons.push(inZone ? "Collecte dans sa zone" : "Collecte hors de sa zone");
+      reasons.push(inZone ? msg("Collecte dans sa zone") : msg("Collecte hors de sa zone"));
     }
 
     return {

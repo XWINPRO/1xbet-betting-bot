@@ -106,7 +106,7 @@ export async function requireStoreOwner() {
 
 export async function requireCourier() {
   const viewer = await requireViewer("/courier");
-  if (!viewer.courier) redirect("/courier/apply");
+  if (!viewer.courier) redirect("/courier/welcome");
   return { viewer, courier: viewer.courier };
 }
 

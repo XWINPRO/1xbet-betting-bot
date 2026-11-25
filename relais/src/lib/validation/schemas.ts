@@ -1,40 +1,40 @@
 import { z } from "zod";
+import { msg } from "@/i18n/msg";
 import { money, optionalCoord, optionalPhoneField, optionalText, phoneField } from "@/lib/validation/common";
 
 // --- Authentification -------------------------------------------------
 export const loginSchema = z.object({
-  email: z.email("Adresse e-mail invalide").trim().toLowerCase(),
-  password: z.string().min(1, "Mot de passe obligatoire"),
+  email: z.email(msg("Adresse e-mail invalide")).trim().toLowerCase(),
+  password: z.string().min(1, msg("Mot de passe obligatoire")),
   next: z.string().optional(),
 });
 
 export const signupSchema = z.object({
-  full_name: z.string().trim().min(2, "Nom trop court").max(120),
+  full_name: z.string().trim().min(2, msg("Nom trop court")).max(120),
   phone: phoneField,
-  email: z.email("Adresse e-mail invalide").trim().toLowerCase(),
-  password: z.string().min(8, "8 caractères minimum").max(72),
-  intent: z.enum(["merchant", "courier", "customer"]).default("merchant"),
+  email: z.email(msg("Adresse e-mail invalide")).trim().toLowerCase(),
+  password: z.string().min(8, msg("8 caractères minimum")).max(72),
   next: z.string().optional(),
 });
 
 export const passwordSchema = z
   .object({
-    password: z.string().min(8, "8 caractères minimum").max(72),
+    password: z.string().min(8, msg("8 caractères minimum")).max(72),
     confirm: z.string(),
   })
-  .refine((d) => d.password === d.confirm, { message: "Les mots de passe ne correspondent pas", path: ["confirm"] });
+  .refine((d) => d.password === d.confirm, { message: msg("Les mots de passe ne correspondent pas"), path: ["confirm"] });
 
 // --- Boutique ---------------------------------------------------------------
 export const slugField = z
   .string()
   .trim()
   .toLowerCase()
-  .min(3, "3 caractères minimum")
-  .max(48, "48 caractères maximum")
-  .regex(/^[a-z0-9]+(-[a-z0-9]+)*$/, "Lettres minuscules, chiffres et tirets uniquement");
+  .min(3, msg("3 caractères minimum"))
+  .max(48, msg("48 caractères maximum"))
+  .regex(/^[a-z0-9]+(-[a-z0-9]+)*$/, msg("Lettres minuscules, chiffres et tirets uniquement"));
 
 export const createStoreSchema = z.object({
-  name: z.string().trim().min(2, "Nom trop court").max(80),
+  name: z.string().trim().min(2, msg("Nom trop court")).max(80),
   slug: slugField,
   category: optionalText(60),
   phone: phoneField,
@@ -52,13 +52,13 @@ const hoursDay = z.object({
 });
 
 export const storeSettingsSchema = z.object({
-  name: z.string().trim().min(2, "Nom trop court").max(80),
+  name: z.string().trim().min(2, msg("Nom trop court")).max(80),
   slug: slugField,
   description: optionalText(1000),
   category: optionalText(60),
   phone: optionalPhoneField,
   whatsapp: optionalPhoneField,
-  email: z.union([z.literal(""), z.email("Adresse e-mail invalide")]).optional().transform((v) => v || null),
+  email: z.union([z.literal(""), z.email(msg("Adresse e-mail invalide"))]).optional().transform((v) => v || null),
   address: optionalText(300),
   city: optionalText(80),
   lat: optionalCoord,
@@ -70,7 +70,7 @@ export const storeSettingsSchema = z.object({
   default_delivery_fee: money,
   accepted_payment_methods: z
     .array(z.enum(["cash_on_delivery", "manual", "orange_money", "mtn_momo", "other"]))
-    .min(1, "Choisissez au moins un moyen de paiement"),
+    .min(1, msg("Choisissez au moins un moyen de paiement")),
   is_published: z.boolean(),
 });
 
@@ -82,19 +82,19 @@ export const storeOperationsSchema = z.object({
 // --- Catalogue --------------------------------------------------------------
 export const variantSchema = z.object({
   id: z.string().min(1).max(40),
-  name: z.string().trim().min(1, "Nom de variante requis").max(80),
+  name: z.string().trim().min(1, msg("Nom de variante requis")).max(80),
   price: z
     .union([z.number(), z.string()])
     .nullable()
     .optional()
     .transform((v) => (v === "" || v === null || v === undefined ? null : Number(v)))
-    .refine((v) => v === null || (Number.isFinite(v) && v >= 0), "Prix invalide"),
+    .refine((v) => v === null || (Number.isFinite(v) && v >= 0), msg("Prix invalide")),
   available: z.boolean().default(true),
 });
 
 export const productSchema = z
   .object({
-    name: z.string().trim().min(1, "Nom obligatoire").max(120),
+    name: z.string().trim().min(1, msg("Nom obligatoire")).max(120),
     description: optionalText(3000),
     price: money,
     promo_price: z
@@ -116,21 +116,21 @@ export const productSchema = z
   })
   .superRefine((d, ctx) => {
     if (d.promo_price !== null && (!Number.isFinite(d.promo_price) || d.promo_price < 0 || d.promo_price >= d.price)) {
-      ctx.addIssue({ code: "custom", path: ["promo_price"], message: "Le prix promotionnel doit être inférieur au prix" });
+      ctx.addIssue({ code: "custom", path: ["promo_price"], message: msg("Le prix promotionnel doit être inférieur au prix") });
     }
     if (d.track_stock && (d.stock === null || !Number.isFinite(d.stock) || d.stock < 0)) {
-      ctx.addIssue({ code: "custom", path: ["stock"], message: "Indiquez la quantité en stock" });
+      ctx.addIssue({ code: "custom", path: ["stock"], message: msg("Indiquez la quantité en stock") });
     }
   });
 
-export const categorySchema = z.object({ name: z.string().trim().min(1, "Nom requis").max(60) });
+export const categorySchema = z.object({ name: z.string().trim().min(1, msg("Nom requis")).max(60) });
 
 // --- Clients ------------------------------------------------------------------
 export const customerSchema = z.object({
-  full_name: z.string().trim().min(1, "Nom obligatoire").max(120),
+  full_name: z.string().trim().min(1, msg("Nom obligatoire")).max(120),
   phone: phoneField,
   whatsapp: optionalPhoneField,
-  email: z.union([z.literal(""), z.email("Adresse e-mail invalide")]).optional().transform((v) => v || null),
+  email: z.union([z.literal(""), z.email(msg("Adresse e-mail invalide"))]).optional().transform((v) => v || null),
   address: optionalText(300),
   lat: optionalCoord,
   lng: optionalCoord,
@@ -143,7 +143,7 @@ export const orderItemInput = z.object({
   variant_id: z.string().nullable().optional(),
   name: z.string().trim().max(120).optional(),
   unit_price: z.coerce.number().min(0).max(100_000_000),
-  quantity: z.coerce.number().int().min(1, "Quantité minimale : 1").max(999),
+  quantity: z.coerce.number().int().min(1, msg("Quantité minimale : 1")).max(999),
 });
 
 export const createOrderSchema = z
@@ -162,23 +162,23 @@ export const createOrderSchema = z
     mark_paid: z.boolean(),
     instructions: optionalText(1000),
     internal_note: optionalText(1000),
-    items: z.array(orderItemInput).min(1, "Ajoutez au moins un article").max(100),
+    items: z.array(orderItemInput).min(1, msg("Ajoutez au moins un article")).max(100),
   })
   .superRefine((d, ctx) => {
     if (!d.customer_id) {
-      if (d.customer.name.length < 2) ctx.addIssue({ code: "custom", path: ["customer", "name"], message: "Nom du client requis" });
-      if (d.customer.phone.length < 6) ctx.addIssue({ code: "custom", path: ["customer", "phone"], message: "Téléphone requis" });
+      if (d.customer.name.length < 2) ctx.addIssue({ code: "custom", path: ["customer", "name"], message: msg("Nom du client requis") });
+      if (d.customer.phone.length < 6) ctx.addIssue({ code: "custom", path: ["customer", "phone"], message: msg("Téléphone requis") });
     }
     if (d.delivery_mode === "delivery" && !d.delivery_address && !d.customer_id) {
-      ctx.addIssue({ code: "custom", path: ["delivery_address"], message: "Adresse de livraison requise" });
+      ctx.addIssue({ code: "custom", path: ["delivery_address"], message: msg("Adresse de livraison requise") });
     }
     d.items.forEach((item, i) => {
-      if (!item.product_id && !item.name) ctx.addIssue({ code: "custom", path: ["items", i, "name"], message: "Nom requis" });
+      if (!item.product_id && !item.name) ctx.addIssue({ code: "custom", path: ["items", i, "name"], message: msg("Nom requis") });
     });
   });
 
 export const orderDetailsSchema = z.object({
-  customer_name: z.string().trim().min(2, "Nom trop court").max(120),
+  customer_name: z.string().trim().min(2, msg("Nom trop court")).max(120),
   customer_phone: phoneField,
   delivery_mode: z.enum(["delivery", "pickup"]),
   delivery_address: optionalText(300),
@@ -192,7 +192,7 @@ export const orderDetailsSchema = z.object({
 });
 
 export const paymentSchema = z.object({
-  amount: z.coerce.number().positive("Montant invalide").max(100_000_000),
+  amount: z.coerce.number().positive(msg("Montant invalide")).max(100_000_000),
   method: z.enum(["cash_on_delivery", "manual", "orange_money", "mtn_momo", "other"]),
   provider_reference: optionalText(120),
   notes: optionalText(500),
@@ -200,7 +200,7 @@ export const paymentSchema = z.object({
 
 // --- Livreurs -------------------------------------------------------------------
 export const courierFormSchema = z.object({
-  full_name: z.string().trim().min(2, "Nom trop court").max(120),
+  full_name: z.string().trim().min(2, msg("Nom trop court")).max(120),
   phone: phoneField,
   vehicle_type: z.enum(["moto", "velo", "voiture", "tricycle", "camionnette", "pieton"]).nullable().optional().or(z.literal("")).transform((v) => v || null),
   vehicle_plate: optionalText(30),
@@ -212,63 +212,32 @@ export const courierFormSchema = z.object({
     .optional()
     .nullable()
     .transform((v) => (v === "" || v === null || v === undefined ? null : Number(v)))
-    .refine((v) => v === null || (Number.isFinite(v) && v > 0 && v <= 100), "Rayon invalide (1 à 100 km)"),
+    .refine((v) => v === null || (Number.isFinite(v) && v > 0 && v <= 100), msg("Rayon invalide (1 à 100 km)")),
   notes: optionalText(1000),
-});
-
-export const courierApplicationSchema = z.object({
-  full_name: z.string().trim().min(2, "Nom trop court").max(120),
-  phone: phoneField,
-  vehicle_type: z.enum(["moto", "velo", "voiture", "tricycle", "camionnette", "pieton"], { error: "Choisissez un moyen de transport" }),
-  vehicle_plate: optionalText(30),
-  zone: z.string().trim().min(2, "Indiquez votre zone de travail").max(120),
-  id_document_path: z.string().nullable().optional(),
-  accept_terms: z.literal(true, { error: "Vous devez accepter les conditions" }),
-});
-
-// --- Livraison ponctuelle ---------------------------------------------------------
-export const onDemandSchema = z.object({
-  sender: z.object({ name: z.string().trim().min(2, "Nom trop court").max(120), phone: phoneField }),
-  pickup: z.object({
-    address: z.string().trim().min(3, "Adresse de collecte requise").max(300),
-    lat: z.number({ error: "Placez le point de collecte sur la carte" }),
-    lng: z.number({ error: "Placez le point de collecte sur la carte" }),
-  }),
-  recipient: z.object({ name: z.string().trim().min(2, "Nom trop court").max(120), phone: phoneField }),
-  dropoff: z.object({
-    address: z.string().trim().min(3, "Adresse de destination requise").max(300),
-    lat: z.number({ error: "Placez la destination sur la carte" }),
-    lng: z.number({ error: "Placez la destination sur la carte" }),
-  }),
-  package_type: z.enum(["document", "small", "medium", "large", "fragile", "food"], { error: "Choisissez le type de colis" }),
-  description: optionalText(500),
-  instructions: optionalText(1000),
-  payment_method: z.enum(["cash_on_delivery", "orange_money", "mtn_momo", "manual"]),
-  payer: z.enum(["sender", "recipient"]),
-  collect_amount: money.default(0),
-  expected_price: z.number().nonnegative(),
 });
 
 // --- Réclamations -----------------------------------------------------------------
 export const claimSchema = z.object({
   category: z.enum(["damaged", "late", "not_delivered", "wrong_item", "payment", "behaviour", "address", "unreachable", "other"]),
-  description: z.string().trim().min(5, "Décrivez le problème (5 caractères minimum)").max(2000),
-  name: z.string().trim().min(2, "Nom trop court").max(120),
+  description: z.string().trim().min(5, msg("Décrivez le problème (5 caractères minimum)")).max(2000),
+  name: z.string().trim().min(2, msg("Nom trop court")).max(120),
   phone: phoneField,
 });
 
-// --- Tarification -------------------------------------------------------------------
-export const pricingRuleSchema = z.object({
-  name: z.string().trim().min(2).max(80),
-  base_fee: money,
-  per_km_fee: money,
-  min_fee: money,
-  max_distance_km: z
-    .union([z.number(), z.string()])
-    .optional()
-    .nullable()
-    .transform((v) => (v === "" || v === null || v === undefined ? null : Number(v))),
-  rounding: z.coerce.number().int().min(1).max(10000),
-  surcharges: z.record(z.string(), z.coerce.number().min(0)),
-  is_active: z.boolean(),
+// --- Abonnements -------------------------------------------------------------------
+export const subscriptionRequestSchema = z.object({
+  plan_code: z.enum(["starter", "pro", "business"], { error: msg("Choisissez un plan") }),
+  months: z.coerce.number().refine((v) => [1, 3, 6, 12].includes(v), msg("Durée invalide")),
+  method: z.enum(["orange_money", "mtn_momo"], { error: msg("Choisissez le moyen de paiement") }),
+  payer_phone: phoneField,
+  payment_reference: z.string().trim().min(4, msg("Référence trop courte")).max(60, msg("Référence trop longue")),
+  note: optionalText(500),
+});
+
+export const planSchema = z.object({
+  price_monthly: money,
+  max_couriers: z.coerce.number().int(msg("Nombre entier attendu")).min(0).max(500),
+  max_staff: z.coerce.number().int(msg("Nombre entier attendu")).min(0).max(200),
+  tracking: z.enum(["none", "status", "live"]),
+  is_public: z.boolean(),
 });

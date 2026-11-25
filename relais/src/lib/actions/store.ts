@@ -1,5 +1,6 @@
 "use server";
 
+import { msg } from "@/i18n/msg";
 import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -10,7 +11,7 @@ import { fail, ok, toUserMessage, zodFieldErrors, type ActionResult } from "@/li
 export async function createStoreAction(input: unknown): Promise<ActionResult<{ id: string }>> {
   await requireViewer("/onboarding");
   const parsed = createStoreSchema.safeParse(input);
-  if (!parsed.success) return fail("Vérifiez les champs.", zodFieldErrors(parsed.error.issues));
+  if (!parsed.success) return fail(msg("Vérifiez les champs."), zodFieldErrors(parsed.error.issues));
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase.rpc("create_store", { p_payload: parsed.data });
   if (error || !data) {
@@ -24,41 +25,41 @@ export async function createStoreAction(input: unknown): Promise<ActionResult<{ 
 
 export async function updateStoreSettingsAction(input: unknown): Promise<ActionResult> {
   const ctx = await getStoreContext();
-  if (!ctx.isOwner) return fail("Seul le propriétaire peut modifier la boutique.");
+  if (!ctx.isOwner) return fail(msg("Seul le propriétaire peut modifier la boutique."));
   const parsed = storeSettingsSchema.safeParse(input);
-  if (!parsed.success) return fail("Vérifiez les champs.", zodFieldErrors(parsed.error.issues));
-  if ((parsed.data.lat === null) !== (parsed.data.lng === null)) return fail("Position incomplète.");
+  if (!parsed.success) return fail(msg("Vérifiez les champs."), zodFieldErrors(parsed.error.issues));
+  if ((parsed.data.lat === null) !== (parsed.data.lng === null)) return fail(msg("Position incomplète."));
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase.from("stores").update(parsed.data).eq("id", ctx.storeId);
   if (error) {
-    const msg = error.code === "23505" ? "Cette adresse de boutique est déjà utilisée." : toUserMessage(error);
-    return fail(msg, error.code === "23505" ? { slug: msg } : undefined);
+    const message = error.code === "23505" ? msg("Cette adresse de boutique est déjà utilisée.") : toUserMessage(error);
+    return fail(message, error.code === "23505" ? { slug: message } : undefined);
   }
   revalidatePath("/dashboard", "layout");
   revalidatePath(`/shop/${parsed.data.slug}`);
-  return ok(null, "Boutique enregistrée.");
+  return ok(null, msg("Boutique enregistrée."));
 }
 
 export async function updateStoreOperationsAction(input: unknown): Promise<ActionResult> {
   const ctx = await getStoreContext();
-  if (!ctx.isOwner) return fail("Seul le propriétaire peut modifier ces règles.");
+  if (!ctx.isOwner) return fail(msg("Seul le propriétaire peut modifier ces règles."));
   const parsed = storeOperationsSchema.safeParse(input);
-  if (!parsed.success) return fail("Vérifiez les champs.", zodFieldErrors(parsed.error.issues));
+  if (!parsed.success) return fail(msg("Vérifiez les champs."), zodFieldErrors(parsed.error.issues));
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase.from("stores").update(parsed.data).eq("id", ctx.storeId);
   if (error) return fail(toUserMessage(error));
   revalidatePath("/dashboard", "layout");
-  return ok(null, "Règles enregistrées.");
+  return ok(null, msg("Règles enregistrées."));
 }
 
 export async function setStorePublishedAction(published: boolean): Promise<ActionResult> {
   const ctx = await getStoreContext();
-  if (!ctx.isOwner) return fail("Seul le propriétaire peut publier la boutique.");
+  if (!ctx.isOwner) return fail(msg("Seul le propriétaire peut publier la boutique."));
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase.from("stores").update({ is_published: published }).eq("id", ctx.storeId);
   if (error) return fail(toUserMessage(error));
   revalidatePath("/dashboard", "layout");
-  return ok(null, published ? "Boutique publiée." : "Boutique masquée.");
+  return ok(null, published ? msg("Boutique publiée.") : msg("Boutique masquée."));
 }
 
 export async function checkSlugAvailableAction(slug: string): Promise<boolean> {

@@ -6,6 +6,8 @@ import { toast } from "sonner";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { ACCEPTED_IMAGE_TYPES, MAX_IMAGE_BYTES, publicAssetUrl, randomFileName } from "@/lib/storage";
 import { cn } from "@/lib/utils";
+import { msg } from "@/i18n/msg";
+import { useI18n } from "@/i18n/client";
 
 /** Redimensionne côté navigateur (≤ maxSize px) pour limiter le poids des photos. */
 export async function downscale(file: File, maxSize: number): Promise<File> {
@@ -27,13 +29,13 @@ export async function downscale(file: File, maxSize: number): Promise<File> {
 
 /** Envoi direct vers Supabase Storage (bucket public store-assets/<store_id>/…). */
 export async function uploadStoreAsset(storeId: string, folder: string, file: File, maxSize = 1600): Promise<string> {
-  if (!ACCEPTED_IMAGE_TYPES.includes(file.type)) throw new Error("Format accepté : JPEG, PNG ou WebP.");
+  if (!ACCEPTED_IMAGE_TYPES.includes(file.type)) throw new Error(msg("Format accepté : JPEG, PNG ou WebP."));
   const prepared = await downscale(file, maxSize);
-  if (prepared.size > MAX_IMAGE_BYTES) throw new Error("Image trop lourde (5 Mo maximum).");
+  if (prepared.size > MAX_IMAGE_BYTES) throw new Error(msg("Image trop lourde (5 Mo maximum)."));
   const path = `${storeId}/${folder}/${randomFileName(prepared)}`;
   const supabase = getSupabaseBrowserClient();
   const { error } = await supabase.storage.from("store-assets").upload(path, prepared, { cacheControl: "31536000", contentType: prepared.type, upsert: false });
-  if (error) throw new Error("Envoi de l'image impossible.");
+  if (error) throw new Error(msg("Envoi de l'image impossible."));
   return path;
 }
 
@@ -48,6 +50,7 @@ export function ImageListUploader({
   onChange: (paths: string[]) => void;
   max?: number;
 }) {
+  const { t } = useI18n();
   const [uploading, setUploading] = React.useState(0);
   const inputRef = React.useRef<HTMLInputElement>(null);
 
@@ -60,7 +63,7 @@ export function ImageListUploader({
       try {
         added.push(await uploadStoreAsset(storeId, "products", file));
       } catch (e) {
-        toast.error((e as Error).message);
+        toast.error(t((e as Error).message));
       } finally {
         setUploading((n) => n - 1);
       }
@@ -76,12 +79,12 @@ export function ImageListUploader({
           <div key={path} className="group relative aspect-square overflow-hidden rounded-md border border-line bg-subtle">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={publicAssetUrl(path)!} alt="" className="size-full object-cover" />
-            {i === 0 ? <span className="absolute top-1.5 left-1.5 rounded-xs bg-ink/80 px-1.5 py-0.5 text-[10.5px] font-medium text-white">Principale</span> : null}
+            {i === 0 ? <span className="absolute top-1.5 left-1.5 rounded-xs bg-ink/80 px-1.5 py-0.5 text-[10.5px] font-medium text-white">{t("Principale")}</span> : null}
             <div className="absolute inset-x-1.5 bottom-1.5 flex justify-end gap-1 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100">
               {i > 0 ? (
                 <button
                   type="button"
-                  aria-label="Définir comme principale"
+                  aria-label={t("Définir comme principale")}
                   className="rounded-sm bg-surface/95 p-1 text-ink shadow-sm hover:bg-surface"
                   onClick={() => onChange([path, ...value.filter((p) => p !== path)])}
                 >
@@ -90,7 +93,7 @@ export function ImageListUploader({
               ) : null}
               <button
                 type="button"
-                aria-label="Retirer l'image"
+                aria-label={t("Retirer l'image")}
                 className="rounded-sm bg-surface/95 p-1 text-danger-ink shadow-sm hover:bg-surface"
                 onClick={() => onChange(value.filter((p) => p !== path))}
               >
@@ -111,12 +114,12 @@ export function ImageListUploader({
             className={cn("flex aspect-square flex-col items-center justify-center gap-1 rounded-md border border-dashed border-line-strong text-xs text-ink-3 transition-colors hover:border-ink-4 hover:bg-subtle hover:text-ink")}
           >
             <ImagePlus className="size-5" />
-            Ajouter
+            {t("Ajouter")}
           </button>
         ) : null}
       </div>
       <input ref={inputRef} type="file" accept={ACCEPTED_IMAGE_TYPES.join(",")} multiple className="sr-only" onChange={(e) => void handleFiles(e.target.files)} />
-      <p className="mt-2 text-xs text-ink-3">JPEG, PNG ou WebP · {max} images maximum · redimensionnées automatiquement.</p>
+      <p className="mt-2 text-xs text-ink-3">{t("JPEG, PNG ou WebP · {max} images maximum · redimensionnées automatiquement.", { max })}</p>
     </div>
   );
 }

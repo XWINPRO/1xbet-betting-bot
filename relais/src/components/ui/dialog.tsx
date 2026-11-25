@@ -4,6 +4,7 @@ import * as React from "react";
 import { Dialog as D } from "radix-ui";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useI18n } from "@/i18n/client";
 
 export const Dialog = D.Root;
 export const DialogTrigger = D.Trigger;
@@ -24,6 +25,7 @@ export function DialogContent({
   size?: "sm" | "md" | "lg" | "xl";
   footer?: React.ReactNode;
 }) {
+  const { t } = useI18n();
   const widths = { sm: "max-w-[400px]", md: "max-w-[520px]", lg: "max-w-[680px]", xl: "max-w-[880px]" };
   return (
     <D.Portal>
@@ -41,10 +43,10 @@ export function DialogContent({
             {description ? (
               <D.Description className="mt-0.5 text-[13px] text-ink-3">{description}</D.Description>
             ) : (
-              <D.Description className="sr-only">{typeof title === "string" ? title : "Fenêtre"}</D.Description>
+              <D.Description className="sr-only">{typeof title === "string" ? title : t("Fenêtre")}</D.Description>
             )}
           </div>
-          <D.Close className="-mr-1 rounded-sm p-1 text-ink-3 hover:bg-muted hover:text-ink" aria-label="Fermer">
+          <D.Close className="-mr-1 rounded-sm p-1 text-ink-3 hover:bg-muted hover:text-ink" aria-label={t("Fermer")}>
             <X className="size-4" />
           </D.Close>
         </div>

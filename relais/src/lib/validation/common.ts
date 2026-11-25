@@ -1,14 +1,15 @@
 import { z } from "zod";
+import { msg } from "@/i18n/msg";
 import { normalizePhone } from "@/lib/phone";
 
 export const phoneField = z
   .string()
   .trim()
-  .min(1, "Numéro obligatoire")
+  .min(1, msg("Numéro obligatoire"))
   .transform((v, ctx) => {
     const n = normalizePhone(v);
     if (!n) {
-      ctx.addIssue({ code: "custom", message: "Numéro de téléphone invalide" });
+      ctx.addIssue({ code: "custom", message: msg("Numéro de téléphone invalide") });
       return z.NEVER;
     }
     return n;
@@ -22,7 +23,7 @@ export const optionalPhoneField = z
     if (!v) return null;
     const n = normalizePhone(v);
     if (!n) {
-      ctx.addIssue({ code: "custom", message: "Numéro de téléphone invalide" });
+      ctx.addIssue({ code: "custom", message: msg("Numéro de téléphone invalide") });
       return z.NEVER;
     }
     return n;
@@ -36,7 +37,7 @@ export const optionalText = (max: number) =>
     .optional()
     .transform((v) => (v ? v : null));
 
-export const money = z.coerce.number({ error: "Montant invalide" }).min(0, "Le montant doit être positif").max(100_000_000, "Montant trop élevé");
+export const money = z.coerce.number({ error: msg("Montant invalide") }).min(0, msg("Le montant doit être positif")).max(100_000_000, msg("Montant trop élevé"));
 
 export const optionalCoord = z
   .union([z.number(), z.string()])

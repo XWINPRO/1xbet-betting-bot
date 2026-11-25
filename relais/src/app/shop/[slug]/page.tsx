@@ -6,6 +6,7 @@ import { getSiteUrl } from "@/lib/auth";
 import { publicAssetUrl } from "@/lib/storage";
 import { Storefront } from "@/components/shop/storefront";
 import type { OpeningHoursDay, ProductVariant } from "@/types/domain";
+import { getI18n } from "@/i18n/server";
 
 async function loadStore(slug: string) {
   const supabase = await createSupabaseServerClient();
@@ -22,11 +23,12 @@ async function loadStore(slug: string) {
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
   const { store } = await loadStore(slug);
-  if (!store) return { title: "Boutique introuvable" };
+  const { t } = await getI18n();
+  if (!store) return { title: t("Boutique introuvable") };
   const image = publicAssetUrl(store.banner_path ?? store.logo_path);
   return {
     title: store.name,
-    description: store.description ?? `Commandez en ligne chez ${store.name}.`,
+    description: store.description ?? t("Commandez en ligne chez {store}.", { store: store.name }),
     openGraph: { title: store.name, description: store.description ?? undefined, images: image ? [image] : undefined },
   };
 }

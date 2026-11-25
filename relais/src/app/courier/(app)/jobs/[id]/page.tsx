@@ -3,7 +3,10 @@ import { notFound } from "next/navigation";
 import { Check, ChevronLeft, Navigation, Phone } from "lucide-react";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { requireCourier } from "@/lib/auth";
-import { formatDateTime, formatMoney } from "@/lib/format";
+import { getI18n } from "@/i18n/server";
+import { msg } from "@/i18n/msg";
+import type { I18n } from "@/i18n/translate";
+import type { Metadata } from "next";
 import { formatPhone, telHref } from "@/lib/phone";
 import { googleMapsDirectionsUrl, googleMapsSearchUrl, toLatLng, wazeUrl } from "@/lib/geo";
 import { JOB_STATUS, PACKAGE_TYPES, PAYMENT_METHOD } from "@/lib/status";
@@ -17,13 +20,16 @@ import { JobActions } from "@/components/courier/job-actions";
 import { cn } from "@/lib/utils";
 import type { JobStatus } from "@/types/domain";
 
-export const metadata = { title: "Course" };
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getI18n();
+  return { title: t("Course") };
+}
 
 const STEPS: { status: JobStatus; label: string }[] = [
-  { status: "accepted", label: "Acceptée" },
-  { status: "picked_up", label: "Récupérée" },
-  { status: "in_transit", label: "En route" },
-  { status: "delivered", label: "Livrée" },
+  { status: "accepted", label: msg("Acceptée") },
+  { status: "picked_up", label: msg("Récupérée") },
+  { status: "in_transit", label: msg("En route") },
+  { status: "delivered", label: msg("Livrée") },
 ];
 
 function Stop({
@@ -35,7 +41,9 @@ function Stop({
   point,
   active,
   whatsappText,
+  t,
 }: {
+  t: I18n["t"];
   letter: "A" | "B";
   title: string;
   name: string | null;
@@ -54,13 +62,13 @@ function Stop({
           <p className="text-xs font-medium text-ink-3">{title}</p>
           {name ? <p className="text-[15px] font-semibold text-ink">{name}</p> : null}
           <p className="text-[14px] text-ink-2">{address}</p>
-          {!point ? <p className="mt-0.5 text-xs text-warning-ink">Pas de position GPS : navigation par adresse.</p> : null}
+          {!point ? <p className="mt-0.5 text-xs text-warning-ink">{t("Pas de position GPS : navigation par adresse.")}</p> : null}
         </div>
       </div>
       <div className="mt-3 grid grid-cols-2 gap-2">
         <Button asChild size="lg" variant={active ? "primary" : "secondary"}>
           <a href={nav} target="_blank" rel="noopener noreferrer">
-            <Navigation /> Itinéraire
+            <Navigation /> {t("Itinéraire")}
           </a>
         </Button>
         {point ? (
@@ -76,7 +84,7 @@ function Stop({
           <>
             <Button asChild size="lg" variant="secondary">
               <a href={telHref(phone) ?? "#"}>
-                <Phone /> Appeler
+                <Phone /> {t("Appeler")}
               </a>
             </Button>
             <WhatsAppButton size="lg" label="WhatsApp" href={whatsappUrl(phone, whatsappText)} />
@@ -91,6 +99,8 @@ function Stop({
 export default async function CourierJobPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const { courier } = await requireCourier();
+  const i18n = await getI18n();
+  const { t, f } = i18n;
   const supabase = await createSupabaseServerClient();
   const { data: job } = await supabase
     .from("delivery_jobs")
@@ -113,21 +123,21 @@ export default async function CourierJobPage({ params }: { params: Promise<{ id:
     <div className="flex flex-col gap-4 pb-4">
       <div className="flex items-center justify-between">
         <Link href="/courier" className="inline-flex items-center gap-1 text-[13px] text-ink-3">
-          <ChevronLeft className="size-4" /> Accueil
+          <ChevronLeft className="size-4" /> {t("Accueil")}
         </Link>
         <span className="font-mono text-xs text-ink-3">{job.reference}</span>
       </div>
 
       <div>
         <div className="flex flex-wrap items-center gap-2">
-          <h1 className="text-lg font-semibold">{job.stores?.name ?? "Livraison ponctuelle"}</h1>
+          <h1 className="text-lg font-semibold">{job.stores?.name ?? "—"}</h1>
           <StatusBadge map={JOB_STATUS} value={job.status} pulse={job.status === "in_transit"} />
         </div>
-        {job.orders?.reference ? <p className="text-[13px] text-ink-3">Commande {job.orders.reference}</p> : null}
+        {job.orders?.reference ? <p className="text-[13px] text-ink-3">{t("Commande {ref}", { ref: job.orders.reference })}</p> : null}
       </div>
 
       {live || job.status === "delivered" ? (
-        <ol className="grid grid-cols-4 gap-1" aria-label="Progression">
+        <ol className="grid grid-cols-4 gap-1" aria-label={t("Progression")}>
           {STEPS.map((s, i) => {
             const done = stepIndex >= i;
             return (
@@ -135,7 +145,7 @@ export default async function CourierJobPage({ params }: { params: Promise<{ id:
                 <span className={cn("h-1.5 rounded-full", done ? "bg-ink" : "bg-line")} />
                 <span className={cn("flex items-center gap-1 text-[11px]", done ? "font-medium text-ink" : "text-ink-4")}>
                   {done ? <Check className="size-3" /> : null}
-                  {s.label}
+                  {t(s.label)}
                 </span>
               </li>
             );
@@ -145,25 +155,26 @@ export default async function CourierJobPage({ params }: { params: Promise<{ id:
 
       {collect > 0 && job.status !== "delivered" ? (
         <div className="rounded-lg border border-warning/30 bg-warning-soft px-4 py-3">
-          <p className="text-xs font-medium text-warning-ink">Montant à encaisser à la livraison</p>
-          <p className="text-2xl font-semibold tabular text-warning-ink">{formatMoney(collect, job.currency)}</p>
-          <p className="text-xs text-warning-ink/80">{PAYMENT_METHOD[job.payment_method]}</p>
+          <p className="text-xs font-medium text-warning-ink">{t("Montant à encaisser à la livraison")}</p>
+          <p className="text-2xl font-semibold tabular text-warning-ink">{f.money(collect, job.currency)}</p>
+          <p className="text-xs text-warning-ink/80">{t(PAYMENT_METHOD[job.payment_method])}</p>
         </div>
       ) : null}
 
-      {job.status === "cancelled" ? <Notice tone="neutral" title="Course annulée">{job.cancel_reason}</Notice> : null}
-      {job.status === "failed" ? <Notice tone="danger" title="Échec enregistré">{job.failure_reason}</Notice> : null}
+      {job.status === "cancelled" ? <Notice tone="neutral" title={t("Course annulée")}>{job.cancel_reason ? t(job.cancel_reason) : null}</Notice> : null}
+      {job.status === "failed" ? <Notice tone="danger" title={t("Échec enregistré")}>{job.failure_reason}</Notice> : null}
       {job.status === "delivered" ? (
-        <Notice tone="success" title={`Livrée le ${formatDateTime(job.delivered_at)}`}>
-          {job.cash_collected ? `Espèces déclarées encaissées : ${formatMoney(collect, job.currency)}.` : null}
+        <Notice tone="success" title={t("Livrée le {date}", { date: f.dateTime(job.delivered_at) })}>
+          {job.cash_collected ? t("Espèces déclarées encaissées : {amount}.", { amount: f.money(collect, job.currency) }) : null}
         </Notice>
       ) : null}
 
       {live || job.status === "offered" ? <CourierJobMap pickup={pickup} dropoff={dropoff} target={target} /> : null}
 
       <Stop
+        t={t}
         letter="A"
-        title="Point de collecte"
+        title={t("Point de collecte")}
         name={job.pickup_name}
         address={job.pickup_address}
         phone={revealContacts && live ? job.pickup_phone : null}
@@ -171,20 +182,21 @@ export default async function CourierJobPage({ params }: { params: Promise<{ id:
         active={target === "pickup"}
       />
       <Stop
+        t={t}
         letter="B"
-        title="Destination"
+        title={t("Destination")}
         name={revealContacts ? job.dropoff_name : null}
         address={job.dropoff_address}
         phone={revealContacts && live ? job.dropoff_phone : null}
         point={dropoff}
         active={target === "dropoff"}
-        whatsappText={waMessages.courierToRecipient({ recipientName: job.dropoff_name.split(" ")[0], storeName: job.stores?.name, reference: job.reference })}
+        whatsappText={waMessages(i18n).courierToRecipient({ recipientName: job.dropoff_name.split(" ")[0], storeName: job.stores?.name, reference: job.reference })}
       />
 
       {items.length || job.package_description || job.package_type || job.instructions ? (
         <section className="rounded-lg border border-line bg-surface p-4 text-[14px]">
-          <p className="text-xs font-medium text-ink-3">Colis</p>
-          {job.package_type ? <p className="font-medium">{PACKAGE_TYPES[job.package_type] ?? job.package_type}</p> : null}
+          <p className="text-xs font-medium text-ink-3">{t("Colis")}</p>
+          {job.package_type ? <p className="font-medium">{PACKAGE_TYPES[job.package_type] ? t(PACKAGE_TYPES[job.package_type]) : job.package_type}</p> : null}
           {items.length ? (
             <ul className="mt-1 space-y-0.5 text-ink-2">
               {items.map((i, idx) => (
@@ -199,7 +211,7 @@ export default async function CourierJobPage({ params }: { params: Promise<{ id:
           ) : null}
           {job.instructions ? (
             <div className="mt-3 rounded-md bg-subtle px-3 py-2">
-              <p className="text-xs font-medium text-ink-3">Instructions</p>
+              <p className="text-xs font-medium text-ink-3">{t("Instructions")}</p>
               <p className="text-ink">{job.instructions}</p>
             </div>
           ) : null}

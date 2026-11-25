@@ -1082,50 +1082,128 @@ export type Database = {
           },
         ]
       }
-      pricing_rules: {
+      plans: {
         Row: {
-          base_fee: number
+          code: string
+          currency: string
+          is_public: boolean
+          max_couriers: number
+          max_staff: number
+          price_monthly: number
+          sort_order: number
+          tracking: Database["public"]["Enums"]["tracking_level"]
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          code: string
+          currency?: string
+          is_public?: boolean
+          max_couriers?: number
+          max_staff?: number
+          price_monthly?: number
+          sort_order?: number
+          tracking?: Database["public"]["Enums"]["tracking_level"]
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          code?: string
+          currency?: string
+          is_public?: boolean
+          max_couriers?: number
+          max_staff?: number
+          price_monthly?: number
+          sort_order?: number
+          tracking?: Database["public"]["Enums"]["tracking_level"]
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
+      store_subscriptions: {
+        Row: {
+          admin_note: string | null
+          amount: number
           created_at: string
           currency: string
+          ends_at: string | null
           id: string
-          is_active: boolean
-          max_distance_km: number | null
-          min_fee: number
-          name: string
-          package_surcharges: Json
-          per_km_fee: number
-          rounding: number
+          months: number
+          note: string | null
+          payer_phone: string | null
+          payment_method: Database["public"]["Enums"]["payment_method"] | null
+          payment_reference: string | null
+          plan_code: string
+          reference: string
+          requested_by: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          starts_at: string | null
+          status: Database["public"]["Enums"]["subscription_status"]
+          store_id: string
           updated_at: string
         }
         Insert: {
-          base_fee?: number
+          admin_note?: string | null
+          amount?: number
           created_at?: string
           currency?: string
+          ends_at?: string | null
           id?: string
-          is_active?: boolean
-          max_distance_km?: number | null
-          min_fee?: number
-          name: string
-          package_surcharges?: Json
-          per_km_fee?: number
-          rounding?: number
+          months?: number
+          note?: string | null
+          payer_phone?: string | null
+          payment_method?: Database["public"]["Enums"]["payment_method"] | null
+          payment_reference?: string | null
+          plan_code?: string
+          reference?: string
+          requested_by?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          starts_at?: string | null
+          status?: Database["public"]["Enums"]["subscription_status"]
+          store_id?: string
           updated_at?: string
         }
         Update: {
-          base_fee?: number
+          admin_note?: string | null
+          amount?: number
           created_at?: string
           currency?: string
+          ends_at?: string | null
           id?: string
-          is_active?: boolean
-          max_distance_km?: number | null
-          min_fee?: number
-          name?: string
-          package_surcharges?: Json
-          per_km_fee?: number
-          rounding?: number
+          months?: number
+          note?: string | null
+          payer_phone?: string | null
+          payment_method?: Database["public"]["Enums"]["payment_method"] | null
+          payment_reference?: string | null
+          plan_code?: string
+          reference?: string
+          requested_by?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          starts_at?: string | null
+          status?: Database["public"]["Enums"]["subscription_status"]
+          store_id?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "store_subscriptions_plan_code_fkey"
+            columns: ["plan_code"]
+            isOneToOne: false
+            referencedRelation: "plans"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "store_subscriptions_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       product_categories: {
         Row: {
@@ -1534,7 +1612,7 @@ export type Database = {
         Returns: undefined
       }
       admin_courier_board: {
-        Args: { p_kind?: Database["public"]["Enums"]["courier_kind"] }
+        Args: never
         Returns: {
           account_status: Database["public"]["Enums"]["courier_account_status"]
           active_jobs: number
@@ -1544,13 +1622,10 @@ export type Database = {
           delivered_total: number
           effective_status: string
           full_name: string
-          kind: Database["public"]["Enums"]["courier_kind"]
-          last_lat: number
-          last_lng: number
-          last_location_at: string
           last_seen_at: string
+          linked: boolean
           phone: string
-          stores_count: number
+          store_names: string
           vehicle_type: string
           zone: string
         }[]
@@ -1561,17 +1636,52 @@ export type Database = {
           bucket_day: string
           delivered_count: number
           failed_count: number
-          on_demand_count: number
+          new_stores: number
           orders_count: number
         }[]
       }
+      admin_end_subscription: {
+        Args: { p_note?: string; p_subscription_id: string }
+        Returns: undefined
+      }
+      admin_grant_subscription: {
+        Args: { p_months: number; p_note?: string; p_plan_code: string; p_store_id: string }
+        Returns: string
+      }
+      admin_review_subscription: {
+        Args: { p_approve: boolean; p_note?: string; p_subscription_id: string }
+        Returns: undefined
+      }
+      admin_set_courier_suspension: {
+        Args: { p_courier_id: string; p_note?: string; p_suspended: boolean }
+        Returns: undefined
+      }
+      admin_update_plan: {
+        Args: { p_code: string; p_payload: Json }
+        Returns: undefined
+      }
+      billing_payment_details: { Args: never; Returns: Json }
+      cancel_subscription_request: {
+        Args: { p_subscription_id: string }
+        Returns: undefined
+      }
+      job_courier_position: { Args: { p_job_id: string }; Returns: Json }
+      request_subscription: {
+        Args: {
+          p_method: Database["public"]["Enums"]["payment_method"]
+          p_months: number
+          p_note?: string
+          p_payer_phone: string
+          p_payment_reference: string
+          p_plan_code: string
+          p_store_id: string
+        }
+        Returns: string
+      }
+      store_plan_info: { Args: { p_store_id: string }; Returns: Json }
       admin_overview_stats: {
         Args: { p_from: string; p_to: string }
         Returns: Json
-      }
-      admin_review_courier: {
-        Args: { p_courier_id: string; p_decision: string; p_note?: string }
-        Returns: undefined
       }
       admin_set_platform_admin: {
         Args: { p_user_id: string; p_value: boolean }
@@ -1593,7 +1703,6 @@ export type Database = {
         Args: { p_key: string; p_value: Json }
         Returns: undefined
       }
-      apply_platform_courier: { Args: { p_payload: Json }; Returns: string }
       assign_courier: {
         Args: { p_courier_id: string; p_job_id: string }
         Returns: undefined
@@ -1603,7 +1712,6 @@ export type Database = {
         Args: { p_job_id: string; p_reason: string }
         Returns: undefined
       }
-      cancel_on_demand_by_token: { Args: { p_token: string }; Returns: boolean }
       confirm_delivery_receipt: { Args: { p_token: string }; Returns: boolean }
       confirm_transaction: {
         Args: {
@@ -1613,7 +1721,6 @@ export type Database = {
         Returns: undefined
       }
       courier_active_jobs: { Args: { p_courier: string }; Returns: number }
-      courier_claim_job: { Args: { p_job_id: string }; Returns: undefined }
       courier_effective_status: {
         Args: {
           p_account: Database["public"]["Enums"]["courier_account_status"]
@@ -1625,25 +1732,6 @@ export type Database = {
         Returns: string
       }
       courier_heartbeat: { Args: never; Returns: Json }
-      courier_open_jobs: {
-        Args: never
-        Returns: {
-          created_at: string
-          currency: string
-          distance_km: number
-          distance_to_pickup_km: number
-          dropoff_address: string
-          dropoff_lat: number
-          dropoff_lng: number
-          id: string
-          package_type: string
-          pickup_address: string
-          pickup_lat: number
-          pickup_lng: number
-          price: number
-          reference: string
-        }[]
-      }
       courier_report_issue: {
         Args: { p_category: string; p_description: string; p_job_id: string }
         Returns: string
@@ -1670,7 +1758,6 @@ export type Database = {
         Args: { p_options?: Json; p_order_id: string }
         Returns: Json
       }
-      create_on_demand_delivery: { Args: { p_payload: Json }; Returns: Json }
       create_order: {
         Args: { p_payload: Json; p_store_id: string }
         Returns: Json
@@ -1723,16 +1810,6 @@ export type Database = {
         Returns: Json
       }
       purge_location_history: { Args: never; Returns: undefined }
-      quote_delivery: {
-        Args: {
-          p_dropoff_lat: number
-          p_dropoff_lng: number
-          p_package_type?: string
-          p_pickup_lat: number
-          p_pickup_lng: number
-        }
-        Returns: Json
-      }
       random_code: { Args: { p_len: number }; Returns: string }
       record_payment: { Args: { p_payload: Json }; Returns: string }
       remove_store_member: {
@@ -1923,6 +2000,8 @@ export type Database = {
       product_status: "active" | "inactive" | "archived"
       store_role: "owner" | "staff"
       store_status: "active" | "suspended"
+      subscription_status: "pending" | "active" | "rejected" | "cancelled"
+      tracking_level: "none" | "status" | "live"
       transaction_status:
         | "pending"
         | "confirmed"
@@ -2103,6 +2182,8 @@ export const Constants = {
       product_status: ["active", "inactive", "archived"],
       store_role: ["owner", "staff"],
       store_status: ["active", "suspended"],
+      subscription_status: ["pending", "active", "rejected", "cancelled"],
+      tracking_level: ["none", "status", "live"],
       transaction_status: [
         "pending",
         "confirmed",

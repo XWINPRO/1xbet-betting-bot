@@ -1,5 +1,6 @@
 "use server";
 
+import { msg } from "@/i18n/msg";
 import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getViewer } from "@/lib/auth";
@@ -15,7 +16,7 @@ export async function createDeliveryJobAction(
   orderId: string,
   options: { courier_id?: string | null; collect_amount?: number | null; instructions?: string | null } = {},
 ): Promise<ActionResult<{ id: string; reference: string; tracking_token: string }>> {
-  if (!(await getViewer())) return fail("Session expirée.");
+  if (!(await getViewer())) return fail(msg("Session expirée."));
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase.rpc("create_delivery_job", {
     p_order_id: orderId,
@@ -35,7 +36,7 @@ export async function assignCourierAction(jobId: string, courierId: string, orde
   const { error } = await supabase.rpc("assign_courier", { p_job_id: jobId, p_courier_id: courierId });
   if (error) return fail(toUserMessage(error));
   refresh(orderId);
-  return ok(null, "Course envoyée au livreur.");
+  return ok(null, msg("Course envoyée au livreur."));
 }
 
 export async function unassignCourierAction(jobId: string, orderId?: string | null): Promise<ActionResult> {
@@ -43,7 +44,7 @@ export async function unassignCourierAction(jobId: string, orderId?: string | nu
   const { error } = await supabase.rpc("unassign_courier", { p_job_id: jobId });
   if (error) return fail(toUserMessage(error));
   refresh(orderId);
-  return ok(null, "Livreur retiré de la course.");
+  return ok(null, msg("Livreur retiré de la course."));
 }
 
 export async function cancelDeliveryJobAction(jobId: string, reason: string, orderId?: string | null): Promise<ActionResult> {
@@ -51,7 +52,7 @@ export async function cancelDeliveryJobAction(jobId: string, reason: string, ord
   const { error } = await supabase.rpc("cancel_delivery_job", { p_job_id: jobId, p_reason: reason });
   if (error) return fail(toUserMessage(error));
   refresh(orderId);
-  return ok(null, "Course annulée.");
+  return ok(null, msg("Course annulée."));
 }
 
 export async function getProofUrlAction(path: string): Promise<string | null> {

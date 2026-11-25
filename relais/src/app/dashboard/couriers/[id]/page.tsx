@@ -1,9 +1,12 @@
+import { getI18n } from "@/i18n/server";
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getStoreContext } from "@/lib/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { COURIER_ACCOUNT, COURIER_STATUS, JOB_STATUS, VEHICLES } from "@/lib/status";
-import { formatDateTime, formatMoney, formatRelative, secondsSince } from "@/lib/format";
+import { secondsSince } from "@/lib/format";
+import { getStorePlan } from "@/lib/data/plan";
 import { formatPhone, telHref } from "@/lib/phone";
 import { toLatLng } from "@/lib/geo";
 import { whatsappUrl } from "@/lib/whatsapp";
@@ -19,12 +22,17 @@ import { CourierAccessButton, CourierInviteButton } from "@/components/couriers/
 import { CouriersMap } from "@/components/couriers/couriers-map";
 import type { BoardCourier, EffectiveCourierStatus } from "@/types/domain";
 
-export const metadata = { title: "Livreur" };
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getI18n();
+  return { title: t("Livreur") };
+}
 
 export default async function CourierPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const ctx = await getStoreContext();
   if (!ctx.can("couriers.assign")) redirect("/dashboard?denied=1");
+  const { t, f } = await getI18n();
+  const plan = await getStorePlan(ctx.storeId);
   const supabase = await createSupabaseServerClient();
   const [{ data: board }, { data: jobs }, { data: courierRow }, { data: stale }] = await Promise.all([
     supabase.rpc("store_courier_board", { p_store_id: ctx.storeId }),
@@ -52,14 +60,14 @@ export default async function CourierPage({ params }: { params: Promise<{ id: st
     <PageContainer>
       <RealtimeRefresher channel={`courier-${id}`} tables={["couriers", "delivery_jobs"]} filter={undefined} debounceMs={1500} />
       <PageHeader
-        back={{ href: "/dashboard/couriers", label: "Livreurs" }}
+        back={{ href: "/dashboard/couriers", label: t("Livreurs") }}
         title={c.full_name}
         meta={<StatusBadge map={COURIER_STATUS} value={c.effective_status as EffectiveCourierStatus} />}
-        description={COURIER_STATUS[c.effective_status as EffectiveCourierStatus]?.hint}
+        description={COURIER_STATUS[c.effective_status as EffectiveCourierStatus] ? t(COURIER_STATUS[c.effective_status as EffectiveCourierStatus].hint) : undefined}
         actions={
           <>
             <Button asChild variant="secondary">
-              <a href={telHref(c.phone) ?? "#"}>Appeler</a>
+              <a href={telHref(c.phone) ?? "#"}>{t("Appeler")}</a>
             </Button>
             <WhatsAppButton href={whatsappUrl(c.phone)} label="WhatsApp" />
             {ctx.isOwner ? (
@@ -90,55 +98,56 @@ export default async function CourierPage({ params }: { params: Promise<{ id: st
         }
       />
       <StatStrip className="mb-6">
-        <Stat label="Courses en cours" value={c.active_jobs} />
-        <Stat label="Livrées (toutes)" value={delivered.length} tone="success" />
-        <Stat label="Échecs" value={failed.length} tone={failed.length ? "danger" : "default"} />
-        <Stat label="Durée moyenne" value={avg !== null ? `${avg} min` : "—"} hint="acceptation → livraison" />
+        <Stat label={t("Courses en cours")} value={c.active_jobs} />
+        <Stat label={t("Livrées (toutes)")} value={delivered.length} tone="success" />
+        <Stat label={t("Échecs")} value={failed.length} tone={failed.length ? "danger" : "default"} />
+        <Stat label={t("Durée moyenne")} value={avg !== null ? `${avg} min` : "—"} hint={t("acceptation → livraison")} />
       </StatStrip>
       <div className="grid gap-6 lg:grid-cols-[360px_minmax(0,1fr)]">
         <div className="flex flex-col gap-6">
           <Panel>
-            <PanelHeader title="Profil" />
+            <PanelHeader title={t("Profil")} />
             <div className="px-5 py-2">
               <DescriptionList
                 items={[
-                  { label: "Téléphone", value: formatPhone(c.phone) },
-                  { label: "Transport", value: c.vehicle_type ? `${VEHICLES[c.vehicle_type] ?? c.vehicle_type}${c.vehicle_plate ? ` · ${c.vehicle_plate}` : ""}` : "—" },
-                  { label: "Zone", value: c.zone ? `${c.zone}${c.zone_radius_km ? ` (${c.zone_radius_km} km)` : ""}` : "—" },
-                  { label: "Compte", value: c.membership_status === "suspended" ? <Badge tone="danger">Accès suspendu</Badge> : <StatusBadge map={COURIER_ACCOUNT} value={c.account_status} /> },
-                  { label: "Type", value: c.kind === "private" ? "Livreur de la boutique" : "Livreur du réseau" },
-                  { label: "Dernier signal", value: c.last_seen_at ? formatRelative(c.last_seen_at) : "Jamais" },
-                  ...(courierRow?.notes ? [{ label: "Notes", value: courierRow.notes }] : []),
+                  { label: t("Téléphone"), value: formatPhone(c.phone) },
+                  { label: t("Transport"), value: c.vehicle_type ? `${VEHICLES[c.vehicle_type] ? t(VEHICLES[c.vehicle_type]) : c.vehicle_type}${c.vehicle_plate ? ` · ${c.vehicle_plate}` : ""}` : "—" },
+                  { label: t("Zone"), value: c.zone ? `${c.zone}${c.zone_radius_km ? ` (${c.zone_radius_km} km)` : ""}` : "—" },
+                  { label: t("Compte"), value: c.membership_status === "suspended" ? <Badge tone="danger">{t("Accès suspendu")}</Badge> : <StatusBadge map={COURIER_ACCOUNT} value={c.account_status} /> },
+                  { label: t("Dernier signal"), value: c.last_seen_at ? f.relative(c.last_seen_at) : t("Jamais") },
+                  ...(courierRow?.notes ? [{ label: t("Notes"), value: courierRow.notes }] : []),
                 ]}
               />
             </div>
           </Panel>
           <Panel className="overflow-hidden">
-            <PanelHeader title="Dernière position" description={c.last_location_at ? `Reçue ${formatRelative(c.last_location_at)}` : undefined} />
-            {position ? (
+            <PanelHeader title={t("Dernière position")} description={c.last_location_at ? t("Reçue {when}", { when: f.relative(c.last_location_at) }) : undefined} />
+            {plan.tracking !== "live" ? (
+              <p className="px-5 py-4 text-[13px] text-ink-3">{t("La position GPS des livreurs est incluse dans les plans Pro et Entreprise.")}</p>
+            ) : position ? (
               <CouriersMap
                 height={240}
                 store={null}
                 couriers={[{ id: c.courier_id, lat: position.lat, lng: position.lng, accuracy: c.last_accuracy, label: c.full_name, highlight: true, status: c.effective_status as EffectiveCourierStatus, stale: (secondsSince(c.last_location_at) ?? Infinity) > staleAfter }]}
               />
             ) : (
-              <p className="px-5 py-4 text-[13px] text-ink-3">Position non partagée : le livreur est indisponible, hors course, ou n&apos;a pas autorisé la localisation.</p>
+              <p className="px-5 py-4 text-[13px] text-ink-3">{t("Position non partagée : le livreur est indisponible, hors course, ou n'a pas autorisé la localisation.")}</p>
             )}
           </Panel>
         </div>
         <Panel>
-          <PanelHeader title="Historique des courses" />
+          <PanelHeader title={t("Historique des courses")} />
           {!list.length ? (
-            <EmptyState compact title="Aucune course pour votre boutique" />
+            <EmptyState compact title={t("Aucune course pour votre boutique")} />
           ) : (
             <TableWrap>
               <Table>
                 <THead>
                   <tr>
-                    <TH>Course</TH>
-                    <TH>Statut</TH>
-                    <TH className="hidden md:table-cell">Destination</TH>
-                    <TH align="right" className="hidden sm:table-cell">À encaisser</TH>
+                    <TH>{t("Course")}</TH>
+                    <TH>{t("Statut")}</TH>
+                    <TH className="hidden md:table-cell">{t("Destination")}</TH>
+                    <TH align="right" className="hidden sm:table-cell">{t("À encaisser")}</TH>
                   </tr>
                 </THead>
                 <tbody>
@@ -154,11 +163,11 @@ export default async function CourierPage({ params }: { params: Promise<{ id: st
                       </TD>
                       <TD>
                         <StatusBadge map={JOB_STATUS} value={j.status} />
-                        <div className="mt-0.5 text-xs text-ink-3">{formatDateTime(j.delivered_at ?? j.failed_at ?? j.created_at)}</div>
+                        <div className="mt-0.5 text-xs text-ink-3">{f.dateTime(j.delivered_at ?? j.failed_at ?? j.created_at)}</div>
                       </TD>
                       <TD className="hidden max-w-[260px] truncate text-ink-2 md:table-cell">{j.dropoff_address}</TD>
                       <TD align="right" className="hidden sm:table-cell">
-                        {Number(j.collect_amount) > 0 ? formatMoney(j.collect_amount, j.currency) : "—"}
+                        {Number(j.collect_amount) > 0 ? f.money(j.collect_amount, j.currency) : "—"}
                       </TD>
                     </TR>
                   ))}

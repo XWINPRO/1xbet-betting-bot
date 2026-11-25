@@ -2,12 +2,15 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useI18n } from "@/i18n/client";
 import {
   Activity,
   Banknote,
   Bike,
   ChartColumn,
   ClipboardList,
+  CreditCard,
+  Layers,
   History,
   LayoutGrid,
   MessageSquareWarning,
@@ -42,12 +45,15 @@ const ICONS = {
   activity: Activity,
   receipt: Receipt,
   jobs: ClipboardList,
+  billing: CreditCard,
+  plans: Layers,
 } as const;
 
 export type NavIcon = keyof typeof ICONS;
 export type NavItem = { href: string; label: string; icon: NavIcon; exact?: boolean; badge?: number | null };
 
 export function NavLinks({ items, onNavigate }: { items: NavItem[]; onNavigate?: () => void }) {
+  const { t } = useI18n();
   const pathname = usePathname();
   return (
     <ul className="flex flex-col gap-px">
@@ -66,7 +72,7 @@ export function NavLinks({ items, onNavigate }: { items: NavItem[]; onNavigate?:
               )}
             >
               <Icon className={cn("size-4 shrink-0", active ? "text-ink" : "text-ink-3 group-hover:text-ink-2")} strokeWidth={active ? 2.1 : 1.8} />
-              <span className="flex-1 truncate">{item.label}</span>
+              <span className="flex-1 truncate">{t(item.label)}</span>
               {item.badge ? (
                 <span className="min-w-5 rounded-xs bg-accent px-1 text-center text-[11px] leading-[18px] font-semibold text-white tabular">{item.badge}</span>
               ) : null}

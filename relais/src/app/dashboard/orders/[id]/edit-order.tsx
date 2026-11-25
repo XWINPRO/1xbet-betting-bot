@@ -1,5 +1,6 @@
 "use client";
 
+import { useI18n } from "@/i18n/client";
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -31,6 +32,7 @@ export type EditableOrder = {
 };
 
 export function EditOrderDetails({ order, deliveryLocked }: { order: EditableOrder; deliveryLocked: boolean }) {
+  const { t } = useI18n();
   const router = useRouter();
   const [open, setOpen] = React.useState(false);
   const [v, setV] = React.useState(order);
@@ -44,10 +46,10 @@ export function EditOrderDetails({ order, deliveryLocked }: { order: EditableOrd
     setPending(false);
     if (!res.ok) {
       setErrors(res.fieldErrors ?? {});
-      toast.error(res.error);
+      toast.error(t(res.error));
       return;
     }
-    toast.success("Commande mise à jour.");
+    toast.success(t("Commande mise à jour."));
     setOpen(false);
     router.refresh();
   }
@@ -55,43 +57,43 @@ export function EditOrderDetails({ order, deliveryLocked }: { order: EditableOrd
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <Button size="sm" variant="ghost" onClick={() => setOpen(true)}>
-        <Pencil /> Modifier
+        <Pencil /> {t("Modifier")}
       </Button>
       <DialogContent
         size="lg"
-        title="Modifier la commande"
+        title={t("Modifier la commande")}
         footer={
           <>
             <Button variant="ghost" onClick={() => setOpen(false)}>
-              Annuler
+              {t("Annuler")}
             </Button>
             <Button variant="primary" loading={pending} onClick={save}>
-              Enregistrer
+              {t("Enregistrer")}
             </Button>
           </>
         }
       >
         <div className="flex flex-col gap-4">
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Client" htmlFor="e-name" error={errors.customer_name}>
+            <Field label={t("Client")} htmlFor="e-name" error={errors.customer_name}>
               <Input id="e-name" value={v.customer_name} onChange={(e) => setV({ ...v, customer_name: e.target.value })} />
             </Field>
-            <Field label="Téléphone" htmlFor="e-phone" error={errors.customer_phone}>
+            <Field label={t("Téléphone")} htmlFor="e-phone" error={errors.customer_phone}>
               <Input id="e-phone" type="tel" value={v.customer_phone} onChange={(e) => setV({ ...v, customer_phone: e.target.value })} />
             </Field>
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Mode" htmlFor="e-mode" hint={deliveryLocked ? "Une course est en cours : le mode ne peut pas changer." : undefined}>
+            <Field label={t("Mode")} htmlFor="e-mode" hint={deliveryLocked ? t("Une course est en cours : le mode ne peut pas changer.") : undefined}>
               <NativeSelect id="e-mode" disabled={deliveryLocked} value={v.delivery_mode} onChange={(e) => setV({ ...v, delivery_mode: e.target.value as "delivery" | "pickup" })}>
-                <option value="delivery">Livraison</option>
-                <option value="pickup">Retrait en boutique</option>
+                <option value="delivery">{t("Livraison")}</option>
+                <option value="pickup">{t("Retrait en boutique")}</option>
               </NativeSelect>
             </Field>
-            <Field label="Moyen de paiement" htmlFor="e-method">
+            <Field label={t("Moyen de paiement")} htmlFor="e-method">
               <NativeSelect id="e-method" value={v.payment_method} onChange={(e) => setV({ ...v, payment_method: e.target.value as PaymentMethod })}>
                 {(Object.keys(PAYMENT_METHOD) as PaymentMethod[]).map((m) => (
                   <option key={m} value={m}>
-                    {PAYMENT_METHOD[m]}
+                    {t(PAYMENT_METHOD[m])}
                   </option>
                 ))}
               </NativeSelect>
@@ -99,24 +101,24 @@ export function EditOrderDetails({ order, deliveryLocked }: { order: EditableOrd
           </div>
           {v.delivery_mode === "delivery" ? (
             <>
-              <Field label="Adresse de livraison" htmlFor="e-address" error={errors.delivery_address}>
+              <Field label={t("Adresse de livraison")} htmlFor="e-address" error={errors.delivery_address}>
                 <Input id="e-address" value={v.delivery_address ?? ""} onChange={(e) => setV({ ...v, delivery_address: e.target.value })} />
               </Field>
               <LocationPicker value={point} onChange={setPoint} kind="dropoff" height={200} />
             </>
           ) : null}
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Frais de livraison" htmlFor="e-fee" error={errors.delivery_fee}>
+            <Field label={t("Frais de livraison")} htmlFor="e-fee" error={errors.delivery_fee}>
               <InputGroup id="e-fee" type="number" min={0} suffix="FCFA" value={v.delivery_fee} onChange={(e) => setV({ ...v, delivery_fee: Number(e.target.value) || 0 })} disabled={v.delivery_mode === "pickup"} />
             </Field>
-            <Field label="Remise" htmlFor="e-discount" error={errors.discount}>
+            <Field label={t("Remise")} htmlFor="e-discount" error={errors.discount}>
               <InputGroup id="e-discount" type="number" min={0} suffix="FCFA" value={v.discount} onChange={(e) => setV({ ...v, discount: Number(e.target.value) || 0 })} />
             </Field>
           </div>
-          <Field label="Instructions de livraison" htmlFor="e-instr" optional>
+          <Field label={t("Instructions de livraison")} htmlFor="e-instr" optional>
             <Textarea id="e-instr" rows={2} value={v.instructions ?? ""} onChange={(e) => setV({ ...v, instructions: e.target.value })} />
           </Field>
-          <Field label="Note interne" htmlFor="e-note" optional>
+          <Field label={t("Note interne")} htmlFor="e-note" optional>
             <Textarea id="e-note" rows={2} value={v.internal_note ?? ""} onChange={(e) => setV({ ...v, internal_note: e.target.value })} />
           </Field>
         </div>
@@ -136,6 +138,7 @@ export function EditOrderItems({
   items: { product_id: string | null; variant_id: string | null; name: string; unit_price: number; quantity: number }[];
   currency: string;
 }) {
+  const { t } = useI18n();
   const router = useRouter();
   const [open, setOpen] = React.useState(false);
   const [lines, setLines] = React.useState<ItemLine[]>(() => items.map((i) => ({ ...i, key: newKey() })));
@@ -149,16 +152,16 @@ export function EditOrderItems({
       }}
     >
       <Button size="sm" variant="ghost" onClick={() => setOpen(true)}>
-        <Pencil /> Modifier les articles
+        <Pencil /> {t("Modifier les articles")}
       </Button>
       <DialogContent
         size="xl"
-        title="Modifier les articles"
-        description="Le stock est recalculé automatiquement."
+        title={t("Modifier les articles")}
+        description={t("Le stock est recalculé automatiquement.")}
         footer={
           <>
             <Button variant="ghost" onClick={() => setOpen(false)}>
-              Annuler
+              {t("Annuler")}
             </Button>
             <Button
               variant="primary"
@@ -167,13 +170,13 @@ export function EditOrderItems({
                 setPending(true);
                 const res = await setOrderItemsAction(orderId, lines.map(({ key: _key, ...l }) => l));
                 setPending(false);
-                if (!res.ok) return toast.error(res.error);
-                toast.success("Articles mis à jour.");
+                if (!res.ok) return toast.error(t(res.error));
+                toast.success(t("Articles mis à jour."));
                 setOpen(false);
                 router.refresh();
               }}
             >
-              Enregistrer
+              {t("Enregistrer")}
             </Button>
           </>
         }

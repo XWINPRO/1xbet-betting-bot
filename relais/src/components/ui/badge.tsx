@@ -1,4 +1,7 @@
+"use client";
+
 import * as React from "react";
+import { useI18n } from "@/i18n/client";
 import { cn } from "@/lib/utils";
 import type { Tone } from "@/lib/status";
 
@@ -44,10 +47,11 @@ export function StatusBadge<T extends string>({
   pulse?: boolean;
   className?: string;
 }) {
+  const { t } = useI18n();
   const meta = value && value in map ? map[value] : { label: value ?? "—", tone: "neutral" as Tone };
   return (
     <Badge tone={meta.tone} pulse={pulse} className={className}>
-      {meta.label}
+      {t(meta.label)}
     </Badge>
   );
 }

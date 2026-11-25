@@ -1,5 +1,6 @@
 "use client";
 
+import { useI18n } from "@/i18n/client";
 import "leaflet/dist/leaflet.css";
 import * as React from "react";
 import L from "leaflet";
@@ -110,6 +111,7 @@ export default function MapCanvas({
   zoom = 14,
   scrollWheelZoom = false,
 }: MapCanvasProps) {
+  const { t } = useI18n();
   const points: LatLng[] = [];
   if (pickup) points.push(pickup);
   if (dropoff) points.push(dropoff);
@@ -139,14 +141,14 @@ export default function MapCanvas({
       {pickup ? (
         <Marker position={[pickup.lat, pickup.lng]} icon={pinIcon("A", "ink")} keyboard={false}>
           <Tooltip direction="top" offset={[0, -36]}>
-            Point de collecte
+            {t("Point de collecte")}
           </Tooltip>
         </Marker>
       ) : null}
       {dropoff ? (
         <Marker position={[dropoff.lat, dropoff.lng]} icon={pinIcon("B", "accent")} keyboard={false}>
           <Tooltip direction="top" offset={[0, -36]}>
-            Destination
+            {t("Destination")}
           </Tooltip>
         </Marker>
       ) : null}

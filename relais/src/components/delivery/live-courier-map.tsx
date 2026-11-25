@@ -4,17 +4,20 @@ import * as React from "react";
 import { MapView } from "@/components/map";
 import { useRoute } from "@/components/map/use-route";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
-import { formatDuration, secondsSince } from "@/lib/format";
+import { secondsSince } from "@/lib/format";
 import type { LatLng } from "@/lib/geo";
 import { cn } from "@/lib/utils";
+import { useI18n } from "@/i18n/client";
 
 export type LivePosition = { lat: number; lng: number; accuracy: number | null; at: string } | null;
 
 /**
  * Carte d'une course : point de collecte, destination et position réelle
- * du livreur (mise à jour en temps réel via Supabase Realtime).
+ * du livreur. Le temps réel signale un changement ; la position est relue
+ * par job_courier_position(), qui vérifie le plan de la boutique.
  */
 export function LiveCourierMap({
+  jobId,
   courierId,
   courierName,
   initialPosition,
@@ -25,6 +28,7 @@ export function LiveCourierMap({
   height = 280,
   className,
 }: {
+  jobId: string;
   courierId: string | null;
   courierName?: string | null;
   initialPosition: LivePosition;
@@ -35,6 +39,7 @@ export function LiveCourierMap({
   height?: number;
   className?: string;
 }) {
+  const { t, f, locale } = useI18n();
   const [position, setPosition] = React.useState<LivePosition>(initialPosition);
   const [, tick] = React.useState(0);
 
@@ -43,26 +48,34 @@ export function LiveCourierMap({
   React.useEffect(() => {
     if (!courierId || !live) return;
     const supabase = getSupabaseBrowserClient();
+    let busy = false;
+    const reload = async () => {
+      if (busy) return;
+      busy = true;
+      const { data } = await supabase.rpc("job_courier_position", { p_job_id: jobId });
+      busy = false;
+      const next = (data as { position: LivePosition } | null)?.position ?? null;
+      if (next) setPosition({ lat: next.lat, lng: next.lng, accuracy: next.accuracy, at: next.at });
+    };
     const channel = supabase
       .channel(`courier-pos-${courierId}`)
-      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "couriers", filter: `id=eq.${courierId}` }, (payload) => {
-        const row = payload.new as { last_lat: number | null; last_lng: number | null; last_accuracy: number | null; last_location_at: string | null };
-        if (row.last_lat !== null && row.last_lng !== null && row.last_location_at) {
-          setPosition({ lat: row.last_lat, lng: row.last_lng, accuracy: row.last_accuracy, at: row.last_location_at });
-        }
-      })
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "couriers", filter: `id=eq.${courierId}` }, () => void reload())
       .subscribe();
+    // Filet de sécurité si le temps réel est interrompu.
+    const poll = setInterval(() => document.visibilityState === "visible" && void reload(), 20000);
     const id = setInterval(() => tick((n) => n + 1), 15000);
     return () => {
       clearInterval(id);
+      clearInterval(poll);
       void supabase.removeChannel(channel);
     };
-  }, [courierId, live]);
+  }, [jobId, courierId, live]);
 
   const age = position ? secondsSince(position.at) : null;
   const stale = age !== null && age > staleAfterSeconds;
   const target = position ? dropoff : null;
   const route = useRoute(live && position ? { lat: position.lat, lng: position.lng } : pickup, dropoff, position ? Math.round(position.lat * 1000) + Math.round(position.lng * 1000) : 0);
+  const km = (meters: number) => (meters / 1000).toLocaleString(locale === "en" ? "en-GB" : "fr-FR", { maximumFractionDigits: 1 });
 
   return (
     <div className={cn("overflow-hidden rounded-md border border-line", className)}>
@@ -72,7 +85,7 @@ export function LiveCourierMap({
           dropoff={dropoff}
           couriers={
             live && position
-              ? [{ id: courierId ?? "c", lat: position.lat, lng: position.lng, accuracy: position.accuracy, stale, label: courierName ?? "Livreur", highlight: true, status: "busy" }]
+              ? [{ id: courierId ?? "c", lat: position.lat, lng: position.lng, accuracy: position.accuracy, stale, label: courierName ?? t("Livreur"), highlight: true, status: "busy" }]
               : []
           }
           route={route.state === "ready" ? route.coordinates : null}
@@ -82,18 +95,20 @@ export function LiveCourierMap({
       <div className="flex flex-wrap items-center justify-between gap-2 border-t border-line bg-subtle px-3 py-2 text-xs text-ink-3">
         <span>
           {!live
-            ? "Suivi en direct inactif pour cette course."
+            ? t("Suivi en direct inactif pour cette course.")
             : !position
-              ? "Position du livreur pas encore reçue."
+              ? t("Position du livreur pas encore reçue.")
               : stale
-                ? `Position obsolète — dernière mise à jour il y a ${formatDuration(age)}.`
-                : `Position reçue il y a ${age !== null && age < 60 ? `${age} s` : formatDuration(age)}${position.accuracy ? ` · précision ± ${Math.round(position.accuracy)} m` : ""}.`}
+                ? t("Position obsolète — dernière mise à jour il y a {duration}.", { duration: f.duration(age) })
+                : `${t("Position reçue il y a {duration}", { duration: age !== null && age < 60 ? `${age} s` : f.duration(age) })}${
+                    position.accuracy ? ` · ${t("précision ± {m} m", { m: Math.round(position.accuracy) })}` : ""
+                  }.`}
         </span>
         <span>
           {route.state === "ready" && target
-            ? `Itinéraire : ${(route.distanceMeters / 1000).toFixed(1).replace(".", ",")} km · ~${formatDuration(route.durationSeconds)}`
+            ? t("Itinéraire : {km} km · ~{duration}", { km: km(route.distanceMeters), duration: f.duration(route.durationSeconds) })
             : route.state === "disabled"
-              ? "Itinéraire non configuré"
+              ? t("Itinéraire non configuré")
               : null}
         </span>
       </div>

@@ -5,8 +5,10 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ExternalLink, Plus, Search } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
+import { useI18n } from "@/i18n/client";
 
 export function DashboardTopbar({ shopUrl, canCreateOrder }: { shopUrl: string | null; canCreateOrder: boolean }) {
+  const { t } = useI18n();
   const router = useRouter();
   const [q, setQ] = React.useState("");
   return (
@@ -22,20 +24,20 @@ export function DashboardTopbar({ shopUrl, canCreateOrder }: { shopUrl: string |
         <input
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="Commande, client, téléphone…"
-          aria-label="Rechercher une commande"
+          placeholder={t("Commande, client, téléphone…")}
+          aria-label={t("Rechercher une commande")}
           className="h-8 w-full rounded-md border border-line bg-subtle pr-3 pl-8 text-[13px] placeholder:text-ink-4 focus:border-accent focus:bg-surface focus:shadow-focus focus:outline-none"
         />
       </form>
       {shopUrl ? (
         <Link href={shopUrl} target="_blank" className={buttonVariants({ variant: "ghost", size: "sm", className: "hidden sm:inline-flex" })}>
-          Boutique publique <ExternalLink />
+          {t("Boutique publique")} <ExternalLink />
         </Link>
       ) : null}
       {canCreateOrder ? (
         <Button asChild variant="primary" size="sm">
           <Link href="/dashboard/orders/new">
-            <Plus /> Nouvelle commande
+            <Plus /> {t("Nouvelle commande")}
           </Link>
         </Button>
       ) : null}

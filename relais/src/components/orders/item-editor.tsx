@@ -1,10 +1,10 @@
 "use client";
 
+import { useI18n } from "@/i18n/client";
 import * as React from "react";
 import { Minus, Package, Plus, Search, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input, NativeSelect } from "@/components/ui/input";
-import { formatMoney } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { ProductVariant } from "@/types/domain";
 
@@ -56,6 +56,7 @@ export function ItemEditor({
   currency: string;
   error?: string;
 }) {
+  const { t, f } = useI18n();
   const [query, setQuery] = React.useState("");
   const [open, setOpen] = React.useState(false);
   const byId = React.useMemo(() => new Map(products.map((p) => [p.id, p])), [products]);
@@ -80,10 +81,10 @@ export function ItemEditor({
           }}
           onFocus={() => setOpen(true)}
           onBlur={() => setTimeout(() => setOpen(false), 150)}
-          placeholder={products.length ? "Ajouter un produit du catalogue…" : "Aucun produit au catalogue — ajoutez un article libre"}
+          placeholder={products.length ? t("Ajouter un produit du catalogue…") : t("Aucun produit au catalogue — ajoutez un article libre")}
           className="pl-8"
           disabled={!products.length}
-          aria-label="Rechercher un produit"
+          aria-label={t("Rechercher un produit")}
         />
         {open && filtered.length > 0 ? (
           <ul className="absolute inset-x-0 top-full z-20 mt-1 max-h-72 overflow-y-auto rounded-md border border-line bg-surface p-1 shadow-pop">
@@ -104,9 +105,9 @@ export function ItemEditor({
                   >
                     <Package className="size-4 text-ink-4" />
                     <span className="flex-1 truncate text-ink">{p.name}</span>
-                    {p.status !== "active" ? <span className="text-xs text-ink-4">masqué</span> : null}
-                    {p.track_stock ? <span className={cn("text-xs tabular", out ? "text-danger-ink" : "text-ink-3")}>{out ? "épuisé" : `${p.stock} en stock`}</span> : null}
-                    <span className="font-medium tabular text-ink-2">{formatMoney(p.promo_price ?? p.price, currency)}</span>
+                    {p.status !== "active" ? <span className="text-xs text-ink-4">{t("masqué")}</span> : null}
+                    {p.track_stock ? <span className={cn("text-xs tabular", out ? "text-danger-ink" : "text-ink-3")}>{out ? t("épuisé") : t("{n} en stock", { n: p.stock ?? 0 })}</span> : null}
+                    <span className="font-medium tabular text-ink-2">{f.money(p.promo_price ?? p.price, currency)}</span>
                   </button>
                 </li>
               );
@@ -117,7 +118,7 @@ export function ItemEditor({
 
       {lines.length === 0 ? (
         <div className={cn("rounded-md border border-dashed px-4 py-6 text-center text-[13px] text-ink-3", error ? "border-danger/50" : "border-line-strong")}>
-          Aucun article. Cherchez un produit ou ajoutez un article libre.
+          {t("Aucun article. Cherchez un produit ou ajoutez un article libre.")}
         </div>
       ) : (
         <div className="overflow-hidden rounded-md border border-line">
@@ -133,7 +134,7 @@ export function ItemEditor({
                         <NativeSelect
                           className="mt-1 h-8 text-[13px]"
                           value={line.variant_id ?? ""}
-                          aria-label="Variante"
+                          aria-label={t("Variante")}
                           onChange={(e) => {
                             const v = product.variants.find((x) => x.id === e.target.value);
                             update(line.key, { variant_id: v?.id ?? null, unit_price: v?.price ?? product.promo_price ?? product.price });
@@ -149,11 +150,11 @@ export function ItemEditor({
                       ) : null}
                     </>
                   ) : (
-                    <Input value={line.name} onChange={(e) => update(line.key, { name: e.target.value })} placeholder="Désignation de l'article" className="h-8" aria-label="Désignation" />
+                    <Input value={line.name} onChange={(e) => update(line.key, { name: e.target.value })} placeholder={t("Désignation de l'article")} className="h-8" aria-label={t("Désignation")} />
                   )}
                 </div>
                 <div className="row-start-2 flex items-center sm:row-start-auto">
-                  <Button type="button" size="icon-sm" variant="secondary" aria-label="Diminuer" onClick={() => update(line.key, { quantity: Math.max(1, line.quantity - 1) })}>
+                  <Button type="button" size="icon-sm" variant="secondary" aria-label={t("Diminuer")} onClick={() => update(line.key, { quantity: Math.max(1, line.quantity - 1) })}>
                     <Minus />
                   </Button>
                   <input
@@ -163,9 +164,9 @@ export function ItemEditor({
                     value={line.quantity}
                     onChange={(e) => update(line.key, { quantity: Math.max(1, Math.min(999, Number(e.target.value) || 1)) })}
                     className="h-7 w-11 bg-transparent text-center text-[13.5px] tabular outline-none"
-                    aria-label="Quantité"
+                    aria-label={t("Quantité")}
                   />
-                  <Button type="button" size="icon-sm" variant="secondary" aria-label="Augmenter" onClick={() => update(line.key, { quantity: Math.min(999, line.quantity + 1) })}>
+                  <Button type="button" size="icon-sm" variant="secondary" aria-label={t("Augmenter")} onClick={() => update(line.key, { quantity: Math.min(999, line.quantity + 1) })}>
                     <Plus />
                   </Button>
                 </div>
@@ -178,15 +179,15 @@ export function ItemEditor({
                       value={line.unit_price}
                       onChange={(e) => update(line.key, { unit_price: Math.max(0, Number(e.target.value) || 0) })}
                       className="h-8 w-full rounded-md border border-line-strong px-2 pr-11 text-right text-[13px] tabular focus:border-accent focus:shadow-focus focus:outline-none"
-                      aria-label="Prix unitaire"
+                      aria-label={t("Prix unitaire")}
                     />
                     <span className="pointer-events-none absolute top-1/2 right-2 -translate-y-1/2 text-[11px] text-ink-4">FCFA</span>
                   </div>
                 </div>
                 <p className="col-start-2 row-start-1 text-right text-[13.5px] font-medium tabular sm:col-start-auto sm:row-start-auto">
-                  {formatMoney(line.unit_price * line.quantity, currency)}
+                  {f.money(line.unit_price * line.quantity, currency)}
                 </p>
-                <Button type="button" size="icon-sm" variant="danger-ghost" aria-label="Retirer" className="col-start-2 row-start-2 justify-self-end sm:col-start-auto sm:row-start-auto" onClick={() => onChange(lines.filter((l) => l.key !== line.key))}>
+                <Button type="button" size="icon-sm" variant="danger-ghost" aria-label={t("Retirer")} className="col-start-2 row-start-2 justify-self-end sm:col-start-auto sm:row-start-auto" onClick={() => onChange(lines.filter((l) => l.key !== line.key))}>
                   <Trash2 />
                 </Button>
               </div>
@@ -201,9 +202,9 @@ export function ItemEditor({
           variant="ghost"
           onClick={() => onChange([...lines, { key: newKey(), product_id: null, variant_id: null, name: "", unit_price: 0, quantity: 1 }])}
         >
-          <Plus /> Article libre
+          <Plus /> {t("Article libre")}
         </Button>
-        {error ? <p className="text-xs text-danger-ink">{error}</p> : null}
+        {error ? <p className="text-xs text-danger-ink">{t(error)}</p> : null}
       </div>
     </div>
   );

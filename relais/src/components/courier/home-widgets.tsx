@@ -4,19 +4,20 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { ArrowRight, MapPin, Navigation, Package, Power } from "lucide-react";
-import { claimJobAction, respondOfferAction, setAvailabilityAction } from "@/lib/actions/courier";
+import { ArrowRight, Navigation, Power } from "lucide-react";
+import { respondOfferAction, setAvailabilityAction } from "@/lib/actions/courier";
 import { useCourierLocation } from "@/components/courier/location-provider";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/ui/badge";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/input";
-import { JOB_STATUS, PACKAGE_TYPES } from "@/lib/status";
-import { formatDistanceKm, formatMoney } from "@/lib/format";
+import { JOB_STATUS } from "@/lib/status";
+import { useI18n } from "@/i18n/client";
 import { cn } from "@/lib/utils";
 import type { JobStatus } from "@/types/domain";
 
 export function AvailabilityToggle({ available, activeJobs }: { available: boolean; activeJobs: number }) {
+  const { t } = useI18n();
   const router = useRouter();
   const { start, geo } = useCourierLocation();
   const [pending, setPending] = React.useState(false);
@@ -26,25 +27,25 @@ export function AvailabilityToggle({ available, activeJobs }: { available: boole
     if (!available && geo !== "tracking" && geo !== "denied") start();
     const res = await setAvailabilityAction(!available);
     setPending(false);
-    if (!res.ok) return toast.error(res.error);
+    if (!res.ok) return toast.error(t(res.error));
     router.refresh();
   }
   return (
     <div className={cn("rounded-lg border p-4", available ? "border-success/30 bg-success-soft/60" : "border-line bg-surface")}>
       <div className="flex items-center gap-3">
         <div className="min-w-0 flex-1">
-          <p className="text-[15px] font-semibold text-ink">{available ? "Vous êtes disponible" : "Vous êtes indisponible"}</p>
+          <p className="text-[15px] font-semibold text-ink">{available ? t("Vous êtes disponible") : t("Vous êtes indisponible")}</p>
           <p className="mt-0.5 text-[13px] text-ink-3">
             {available
-              ? "Vous pouvez recevoir des courses. Votre position est partagée avec vos boutiques."
+              ? t("Vous pouvez recevoir des courses. Votre position est transmise tant que vous êtes disponible.")
               : activeJobs > 0
-                ? "Vous terminez vos courses en cours, sans en recevoir de nouvelles."
-                : "Aucune course ne vous sera proposée et votre position n'est pas partagée."}
+                ? t("Vous terminez vos courses en cours, sans en recevoir de nouvelles.")
+                : t("Aucune course ne vous sera proposée et votre position n'est pas partagée.")}
           </p>
         </div>
       </div>
       <Button size="xl" block variant={available ? "secondary" : "success"} className="mt-4" loading={pending} onClick={toggle}>
-        <Power /> {available ? "Passer indisponible" : "Passer disponible"}
+        <Power /> {available ? t("Passer indisponible") : t("Passer disponible")}
       </Button>
     </div>
   );
@@ -58,13 +59,12 @@ type OfferJob = {
   pickup_address: string;
   dropoff_address: string;
   collect_amount: number;
-  price: number;
   currency: string;
   storeName: string | null;
-  source: "store_order" | "on_demand";
 };
 
 export function OfferCard({ job }: { job: OfferJob }) {
+  const { t, f } = useI18n();
   const router = useRouter();
   const [pending, setPending] = React.useState<"accept" | "decline" | null>(null);
   const [declineOpen, setDeclineOpen] = React.useState(false);
@@ -73,8 +73,8 @@ export function OfferCard({ job }: { job: OfferJob }) {
     setPending(accept ? "accept" : "decline");
     const res = await respondOfferAction(job.id, accept, reason);
     setPending(null);
-    if (!res.ok) return toast.error(res.error);
-    toast.success(res.message ?? "");
+    if (!res.ok) return toast.error(t(res.error));
+    toast.success(t(res.message ?? ""));
     setDeclineOpen(false);
     if (accept) router.push(`/courier/jobs/${job.id}`);
     else router.refresh();
@@ -82,40 +82,40 @@ export function OfferCard({ job }: { job: OfferJob }) {
   return (
     <article className="rounded-lg border-2 border-accent bg-surface p-4 shadow-sm">
       <div className="flex items-center justify-between gap-2">
-        <p className="text-xs font-semibold tracking-wide text-accent uppercase">Nouvelle course</p>
+        <p className="text-xs font-semibold tracking-wide text-accent uppercase">{t("Nouvelle course")}</p>
         <span className="font-mono text-xs text-ink-3">{job.reference}</span>
       </div>
-      <p className="mt-1 text-[13px] text-ink-3">{job.storeName ?? "Livraison ponctuelle"}</p>
+      <p className="mt-1 text-[13px] text-ink-3">{job.storeName ?? "—"}</p>
       <Route pickup={job.pickup_address} pickupLabel={job.pickup_name} dropoff={job.dropoff_address} />
       {job.collect_amount > 0 ? (
         <p className="mt-3 rounded-md bg-warning-soft px-3 py-2 text-[13px] text-warning-ink">
-          À encaisser : <span className="font-semibold tabular">{formatMoney(job.collect_amount, job.currency)}</span>
+          {t("À encaisser :")} <span className="font-semibold tabular">{f.money(job.collect_amount, job.currency)}</span>
         </p>
       ) : null}
       <div className="mt-4 grid grid-cols-[1fr_2fr] gap-2">
         <Button size="lg" variant="secondary" onClick={() => setDeclineOpen(true)} disabled={pending !== null}>
-          Refuser
+          {t("Refuser")}
         </Button>
         <Button size="lg" variant="primary" loading={pending === "accept"} onClick={() => respond(true)}>
-          Accepter
+          {t("Accepter")}
         </Button>
       </div>
       <Dialog open={declineOpen} onOpenChange={setDeclineOpen}>
         <DialogContent
           size="sm"
-          title="Refuser la course"
+          title={t("Refuser la course")}
           footer={
             <>
               <Button variant="ghost" onClick={() => setDeclineOpen(false)}>
-                Retour
+                {t("Retour")}
               </Button>
               <Button variant="danger" loading={pending === "decline"} onClick={() => respond(false)}>
-                Refuser
+                {t("Refuser")}
               </Button>
             </>
           }
         >
-          <Textarea value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Motif (facultatif) : trop loin, panne, déjà occupé…" rows={3} />
+          <Textarea value={reason} onChange={(e) => setReason(e.target.value)} placeholder={t("Motif (facultatif) : trop loin, panne, déjà occupé…")} rows={3} />
         </DialogContent>
       </Dialog>
     </article>
@@ -144,6 +144,7 @@ export function Route({ pickup, pickupLabel, dropoff, dropoffLabel }: { pickup: 
 }
 
 export function ActiveJobCard({ job }: { job: OfferJob & { dropoff_name: string } }) {
+  const { t } = useI18n();
   return (
     <Link href={`/courier/jobs/${job.id}`} className="block rounded-lg border border-line bg-surface p-4 shadow-xs active:bg-subtle">
       <div className="flex items-center justify-between gap-2">
@@ -153,70 +154,10 @@ export function ActiveJobCard({ job }: { job: OfferJob & { dropoff_name: string 
       <Route pickup={job.pickup_address} pickupLabel={job.pickup_name} dropoff={job.dropoff_address} dropoffLabel={job.dropoff_name} />
       <div className="mt-4 flex items-center justify-between rounded-md bg-ink px-4 py-3 text-white">
         <span className="flex items-center gap-2 text-[14px] font-medium">
-          <Navigation className="size-4" /> Ouvrir la course
+          <Navigation className="size-4" /> {t("Ouvrir la course")}
         </span>
         <ArrowRight className="size-4" />
       </div>
     </Link>
-  );
-}
-
-export type OpenJob = {
-  id: string;
-  reference: string;
-  pickup_address: string;
-  dropoff_address: string;
-  package_type: string | null;
-  distance_km: number | null;
-  price: number;
-  currency: string;
-  distance_to_pickup_km: number | null;
-};
-
-export function OpenJobCard({ job }: { job: OpenJob }) {
-  const router = useRouter();
-  const [pending, setPending] = React.useState(false);
-  return (
-    <article className="rounded-lg border border-line bg-surface p-4 shadow-xs">
-      <div className="flex items-center justify-between gap-2">
-        <span className="text-[15px] font-semibold tabular">{formatMoney(job.price, job.currency)}</span>
-        <span className="font-mono text-xs text-ink-3">{job.reference}</span>
-      </div>
-      <div className="mt-1 flex flex-wrap gap-x-3 text-xs text-ink-3">
-        {job.distance_to_pickup_km !== null ? (
-          <span className="inline-flex items-center gap-1">
-            <MapPin className="size-3" /> collecte à {formatDistanceKm(job.distance_to_pickup_km)}
-          </span>
-        ) : null}
-        {job.distance_km !== null ? <span>trajet ≈ {formatDistanceKm(job.distance_km)} (à vol d&apos;oiseau)</span> : null}
-        {job.package_type ? (
-          <span className="inline-flex items-center gap-1">
-            <Package className="size-3" /> {PACKAGE_TYPES[job.package_type] ?? job.package_type}
-          </span>
-        ) : null}
-      </div>
-      <Route pickup={job.pickup_address} dropoff={job.dropoff_address} />
-      <Button
-        size="lg"
-        block
-        variant="primary"
-        className="mt-4"
-        loading={pending}
-        onClick={async () => {
-          setPending(true);
-          const res = await claimJobAction(job.id);
-          setPending(false);
-          if (!res.ok) {
-            toast.error(res.error);
-            router.refresh();
-            return;
-          }
-          toast.success("Course acceptée.");
-          router.push(`/courier/jobs/${job.id}`);
-        }}
-      >
-        Prendre cette course
-      </Button>
-    </article>
   );
 }

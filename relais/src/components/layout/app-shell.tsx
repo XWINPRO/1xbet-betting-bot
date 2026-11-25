@@ -10,6 +10,8 @@ import { NavLinks, type NavItem } from "@/components/layout/nav-link";
 import { Avatar } from "@/components/ui/avatar";
 import { Dropdown, DropdownContent, DropdownItem, DropdownLabel, DropdownSeparator, DropdownTrigger } from "@/components/ui/dropdown";
 import { signOutAction } from "@/lib/actions/auth";
+import { LanguageSwitcher } from "@/components/layout/language-switcher";
+import { useI18n } from "@/i18n/client";
 
 export type ShellUser = { name: string; email: string | null; isAdmin: boolean; isCourier: boolean };
 export type ShellSection = { title?: string; items: NavItem[] };
@@ -29,6 +31,7 @@ export function AppShell({
   children: React.ReactNode;
   homeHref: string;
 }) {
+  const { t } = useI18n();
   const [open, setOpen] = React.useState(false);
   const pathname = usePathname();
   React.useEffect(() => setOpen(false), [pathname]);
@@ -39,15 +42,18 @@ export function AppShell({
         <Brand href={homeHref} size="sm" />
       </div>
       {header ? <div className="px-3 pb-3">{header}</div> : null}
-      <nav className="flex-1 overflow-y-auto px-3 pb-4" aria-label="Navigation principale">
+      <nav className="flex-1 overflow-y-auto px-3 pb-4" aria-label={t("Navigation principale")}>
         {sections.map((section, i) => (
           <div key={i} className={i > 0 ? "mt-5" : undefined}>
-            {section.title ? <p className="mb-1 px-2.5 text-[11px] font-medium tracking-wide text-ink-4 uppercase">{section.title}</p> : null}
+            {section.title ? <p className="mb-1 px-2.5 text-[11px] font-medium tracking-wide text-ink-4 uppercase">{t(section.title)}</p> : null}
             <NavLinks items={section.items} onNavigate={() => setOpen(false)} />
           </div>
         ))}
       </nav>
       <div className="border-t border-line p-3">
+        <div className="mb-2 flex justify-end px-1">
+          <LanguageSwitcher />
+        </div>
         <UserMenu user={user} />
       </div>
     </div>
@@ -61,9 +67,9 @@ export function AppShell({
         <D.Portal>
           <D.Overlay className="fixed inset-0 z-40 bg-ink/30 data-[state=open]:animate-fade-in lg:hidden" />
           <D.Content className="fixed inset-y-0 left-0 z-50 w-[280px] max-w-[85vw] bg-surface shadow-pop data-[state=open]:animate-fade-in lg:hidden">
-            <D.Title className="sr-only">Menu</D.Title>
-            <D.Description className="sr-only">Navigation principale</D.Description>
-            <D.Close className="absolute top-3 right-3 rounded-sm p-1.5 text-ink-3 hover:bg-muted" aria-label="Fermer le menu">
+            <D.Title className="sr-only">{t("Menu")}</D.Title>
+            <D.Description className="sr-only">{t("Navigation principale")}</D.Description>
+            <D.Close className="absolute top-3 right-3 rounded-sm p-1.5 text-ink-3 hover:bg-muted" aria-label={t("Fermer le menu")}>
               <X className="size-4" />
             </D.Close>
             {sidebar}
@@ -72,10 +78,10 @@ export function AppShell({
       </D.Root>
 
       <div className="sticky top-0 z-20 flex h-[52px] items-center gap-3 border-b border-line bg-surface/95 px-4 backdrop-blur-sm sm:px-6 lg:px-8">
-        <button type="button" className="-ml-1 rounded-md p-1.5 text-ink-2 hover:bg-muted lg:hidden" onClick={() => setOpen(true)} aria-label="Ouvrir le menu">
+        <button type="button" className="-ml-1 rounded-md p-1.5 text-ink-2 hover:bg-muted lg:hidden" onClick={() => setOpen(true)} aria-label={t("Ouvrir le menu")}>
           <Menu className="size-5" />
         </button>
-        <Link href={homeHref} className="lg:hidden" aria-label="Accueil">
+        <Link href={homeHref} className="lg:hidden" aria-label={t("Accueil")}>
           <LogoMark size={22} />
         </Link>
         <div className="flex min-w-0 flex-1 items-center justify-end gap-2">{topbar}</div>
@@ -87,34 +93,35 @@ export function AppShell({
 }
 
 function UserMenu({ user }: { user: ShellUser }) {
+  const { t } = useI18n();
   return (
     <Dropdown>
       <DropdownTrigger className="flex w-full items-center gap-2.5 rounded-md px-2 py-1.5 text-left hover:bg-subtle focus-visible:outline-none focus-visible:shadow-focus">
         <Avatar name={user.name} size={28} />
         <span className="min-w-0 flex-1">
-          <span className="block truncate text-[13px] font-medium text-ink">{user.name || "Mon compte"}</span>
+          <span className="block truncate text-[13px] font-medium text-ink">{user.name || t("Mon compte")}</span>
           <span className="block truncate text-xs text-ink-3">{user.email}</span>
         </span>
         <ChevronsUpDown className="size-3.5 text-ink-4" />
       </DropdownTrigger>
       <DropdownContent align="start" side="top" className="w-[224px]">
-        <DropdownLabel>Espaces</DropdownLabel>
+        <DropdownLabel>{t("Espaces")}</DropdownLabel>
         <DropdownItem asChild>
           <Link href="/account">
-            <User /> Mon compte
+            <User /> {t("Mon compte")}
           </Link>
         </DropdownItem>
         {user.isCourier ? (
           <DropdownItem asChild>
             <Link href="/courier">
-              <Bike /> Espace livreur
+              <Bike /> {t("Espace livreur")}
             </Link>
           </DropdownItem>
         ) : null}
         {user.isAdmin ? (
           <DropdownItem asChild>
             <Link href="/admin">
-              <Shield /> Administration
+              <Shield /> {t("Administration")}
             </Link>
           </DropdownItem>
         ) : null}
@@ -122,7 +129,7 @@ function UserMenu({ user }: { user: ShellUser }) {
         <form action={signOutAction}>
           <DropdownItem asChild destructive>
             <button type="submit" className="w-full">
-              <LogOut /> Se déconnecter
+              <LogOut /> {t("Se déconnecter")}
             </button>
           </DropdownItem>
         </form>

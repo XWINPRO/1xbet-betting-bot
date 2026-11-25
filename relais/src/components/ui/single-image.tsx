@@ -7,6 +7,7 @@ import { uploadStoreAsset } from "@/components/ui/image-uploader";
 import { Button } from "@/components/ui/button";
 import { publicAssetUrl } from "@/lib/storage";
 import { cn } from "@/lib/utils";
+import { useI18n } from "@/i18n/client";
 
 export function SingleImageField({
   storeId,
@@ -23,6 +24,7 @@ export function SingleImageField({
   aspect?: "square" | "banner";
   maxSize?: number;
 }) {
+  const { t } = useI18n();
   const [uploading, setUploading] = React.useState(false);
   const input = React.useRef<HTMLInputElement>(null);
   const url = publicAssetUrl(value);
@@ -40,11 +42,11 @@ export function SingleImageField({
       </div>
       <div className="flex flex-wrap gap-2">
         <Button type="button" size="sm" variant="secondary" onClick={() => input.current?.click()} disabled={uploading}>
-          {value ? "Remplacer" : "Choisir une image"}
+          {value ? t("Remplacer") : t("Choisir une image")}
         </Button>
         {value ? (
           <Button type="button" size="sm" variant="ghost" onClick={() => onChange(null)}>
-            <Trash2 /> Retirer
+            <Trash2 /> {t("Retirer")}
           </Button>
         ) : null}
       </div>

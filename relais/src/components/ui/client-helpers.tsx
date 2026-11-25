@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { Button, type ButtonProps } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { useI18n } from "@/i18n/client";
 
 export function SubmitButton({ children, pendingLabel, ...props }: ButtonProps & { pendingLabel?: string }) {
   const { pending } = useFormStatus();
@@ -18,7 +19,7 @@ export function SubmitButton({ children, pendingLabel, ...props }: ButtonProps &
   );
 }
 
-export function CopyButton({ value, label = "Copier", copiedLabel = "Copié", size = "sm", variant = "secondary", className, iconOnly }: {
+export function CopyButton({ value, label, copiedLabel, size = "sm", variant = "secondary", className, iconOnly }: {
   value: string;
   label?: string;
   copiedLabel?: string;
@@ -27,6 +28,9 @@ export function CopyButton({ value, label = "Copier", copiedLabel = "Copié", si
   className?: string;
   iconOnly?: boolean;
 }) {
+  const { t } = useI18n();
+  label ??= t("Copier");
+  copiedLabel ??= t("Copié");
   const [copied, setCopied] = React.useState(false);
   async function copy() {
     try {
@@ -34,7 +38,7 @@ export function CopyButton({ value, label = "Copier", copiedLabel = "Copié", si
       setCopied(true);
       setTimeout(() => setCopied(false), 1600);
     } catch {
-      toast.error("Copie impossible. Sélectionnez le texte manuellement.");
+      toast.error(t("Copie impossible. Sélectionnez le texte manuellement."));
     }
   }
   return (
@@ -46,7 +50,9 @@ export function CopyButton({ value, label = "Copier", copiedLabel = "Copié", si
 }
 
 /** Champ de recherche synchronisé avec le paramètre ?q= de l'URL. */
-export function SearchInput({ placeholder = "Rechercher…", param = "q", className }: { placeholder?: string; param?: string; className?: string }) {
+export function SearchInput({ placeholder, param = "q", className }: { placeholder?: string; param?: string; className?: string }) {
+  const { t } = useI18n();
+  placeholder ??= t("Rechercher…");
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -81,7 +87,7 @@ export function SearchInput({ placeholder = "Rechercher…", param = "q", classN
       {value ? (
         <button
           type="button"
-          aria-label="Effacer"
+          aria-label={t("Effacer")}
           className="absolute top-1/2 right-2 -translate-y-1/2 rounded-xs p-0.5 text-ink-4 hover:text-ink"
           onClick={() => {
             setValue("");
@@ -140,6 +146,7 @@ export function AutoRefresh({ seconds = 30 }: { seconds?: number }) {
 
 /** Heure relative mise à jour côté client (évite les écarts d'hydratation). */
 export function RelativeTime({ value, className }: { value: string | null | undefined; className?: string }) {
+  const { f } = useI18n();
   const [now, setNow] = React.useState<Date | null>(null);
   React.useEffect(() => {
     setNow(new Date());
@@ -148,14 +155,9 @@ export function RelativeTime({ value, className }: { value: string | null | unde
   }, []);
   if (!value) return <span className={className}>—</span>;
   const d = new Date(value);
-  const title = d.toLocaleString("fr-FR");
+  const title = `${f.date(d)} ${f.time(d)}`;
   if (!now) return <span className={className} title={title}>…</span>;
-  const s = Math.round((now.getTime() - d.getTime()) / 1000);
-  let label: string;
-  if (s < 45) label = "à l'instant";
-  else if (s < 3600) label = `il y a ${Math.max(1, Math.round(s / 60))} min`;
-  else if (s < 86400) label = `il y a ${Math.round(s / 3600)} h`;
-  else label = `il y a ${Math.round(s / 86400)} j`;
+  const label = f.relative(d, now);
   return (
     <time dateTime={value} title={title} className={className}>
       {label}

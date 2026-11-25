@@ -5,10 +5,12 @@ import Link from "next/link";
 import { Dropdown, DropdownContent, DropdownItem, DropdownLabel, DropdownSeparator, DropdownTrigger } from "@/components/ui/dropdown";
 import { Avatar } from "@/components/ui/avatar";
 import { switchStoreAction } from "@/lib/actions/store-context";
+import { useI18n } from "@/i18n/client";
 
 export type SwitcherStore = { id: string; name: string; role: "owner" | "staff"; logoUrl: string | null };
 
 export function StoreSwitcher({ stores, activeId }: { stores: SwitcherStore[]; activeId: string }) {
+  const { t } = useI18n();
   const active = stores.find((s) => s.id === activeId) ?? stores[0];
   return (
     <Dropdown>
@@ -16,12 +18,12 @@ export function StoreSwitcher({ stores, activeId }: { stores: SwitcherStore[]; a
         <Avatar name={active?.name} src={active?.logoUrl} size={24} />
         <span className="min-w-0 flex-1">
           <span className="block truncate text-[13px] font-medium text-ink">{active?.name}</span>
-          <span className="block text-[11px] text-ink-3">{active?.role === "owner" ? "Propriétaire" : "Équipe"}</span>
+          <span className="block text-[11px] text-ink-3">{active?.role === "owner" ? t("Propriétaire") : t("Équipe")}</span>
         </span>
         <ChevronsUpDown className="size-3.5 text-ink-4" />
       </DropdownTrigger>
       <DropdownContent align="start" className="w-[232px]">
-        <DropdownLabel>Boutiques</DropdownLabel>
+        <DropdownLabel>{t("Boutiques")}</DropdownLabel>
         {stores.map((s) => (
           <form key={s.id} action={switchStoreAction}>
             <input type="hidden" name="store_id" value={s.id} />
@@ -37,7 +39,7 @@ export function StoreSwitcher({ stores, activeId }: { stores: SwitcherStore[]; a
         <DropdownSeparator />
         <DropdownItem asChild>
           <Link href="/onboarding?new=1">
-            <Plus /> Créer une boutique
+            <Plus /> {t("Créer une boutique")}
           </Link>
         </DropdownItem>
       </DropdownContent>

@@ -31,7 +31,7 @@ where key in ('dispatch.platform_max_active_jobs', 'dispatch.open_pool_radius_km
 alter table public.couriers add constraint couriers_private_only check (kind = 'private') not valid;
 alter table public.couriers validate constraint couriers_private_only;
 alter table public.delivery_jobs add constraint delivery_jobs_store_only check (source = 'store_order') not valid;
-alter table public.delivery_jobs validate constraint delivery_jobs_store_only;
+-- Non validée : d'anciennes demandes ponctuelles peuvent subsister ; aucune nouvelle ne peut être créée.
 
 -- ---------------------------------------------------------------------
 -- 2. Plans et abonnements

@@ -1,9 +1,11 @@
+import { getI18n } from "@/i18n/server";
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { MapPin, Phone } from "lucide-react";
 import { getSiteUrl, getStoreContext } from "@/lib/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { formatDateTime, formatMoney } from "@/lib/format";
+import { getStorePlan } from "@/lib/data/plan";
 import { formatPhone, telHref } from "@/lib/phone";
 import { toLatLng, googleMapsDirectionsUrl } from "@/lib/geo";
 import { ORDER_SOURCE, ORDER_STATUS } from "@/lib/status";
@@ -20,11 +22,16 @@ import { OrderTimeline } from "./order-timeline";
 import { EditOrderDetails, EditOrderItems } from "./edit-order";
 import type { BoardCourier, ProductVariant } from "@/types/domain";
 
-export const metadata = { title: "Commande" };
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getI18n();
+  return { title: t("Commande") };
+}
 
 export default async function OrderPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const ctx = await getStoreContext();
+  const i18n = await getI18n();
+  const { t, f } = i18n;
   const supabase = await createSupabaseServerClient();
 
   const { data: order } = await supabase
@@ -43,7 +50,7 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
     order.current_job_id
       ? supabase
           .from("delivery_jobs")
-          .select("*, couriers(id, full_name, phone, last_lat, last_lng, last_accuracy, last_location_at)")
+          .select("*, couriers(id, full_name, phone)")
           .eq("id", order.current_job_id)
           .maybeSingle()
       : Promise.resolve({ data: null }),
@@ -65,6 +72,10 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
 
   const site = await getSiteUrl();
   const job = jobRes.data;
+  const plan = await getStorePlan(ctx.storeId);
+  // Position du livreur : uniquement via la fonction qui vérifie le plan.
+  const { data: positionRes } = job ? await supabase.rpc("job_courier_position", { p_job_id: job.id }) : { data: null };
+  const position = (positionRes as { position: { lat: number; lng: number; accuracy: number | null; at: string } | null } | null)?.position ?? null;
   const staleAfter = Number(settingsRes.data?.value ?? 120);
 
   // Noms des auteurs des événements (profils visibles par RLS : membres de la boutique).
@@ -86,10 +97,7 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
         courier_id: job.courier_id,
         courier_name: job.couriers?.full_name ?? null,
         courier_phone: job.couriers?.phone ?? null,
-        courier_position:
-          job.couriers?.last_lat != null && job.couriers?.last_lng != null && job.couriers.last_location_at
-            ? { lat: job.couriers.last_lat, lng: job.couriers.last_lng, accuracy: job.couriers.last_accuracy, at: job.couriers.last_location_at }
-            : null,
+        courier_position: position ? { lat: position.lat, lng: position.lng, accuracy: position.accuracy, at: position.at } : null,
         tracking_token: job.tracking_token,
         tracking_active: job.tracking_active,
         collect_amount: Number(job.collect_amount),
@@ -113,7 +121,7 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
   const dropoff = toLatLng(order.delivery_lat, order.delivery_lng);
   const hasActiveJob = Boolean(job && !["delivered", "failed", "cancelled"].includes(job.status));
 
-  const confirmationText = waMessages.orderConfirmation({
+  const confirmationText = waMessages(i18n).orderConfirmation({
     storeName: storeRes.data?.name ?? ctx.store.name,
     customerName: order.customer_name,
     reference: order.reference,
@@ -128,18 +136,18 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
       <RealtimeRefresher channel={`order-${id}`} tables={["orders", "delivery_jobs"]} filter={`id=eq.${id}`} />
       {job ? <RealtimeRefresher channel={`order-job-${job.id}`} tables={["delivery_jobs"]} filter={`id=eq.${job.id}`} /> : null}
       <PageHeader
-        back={{ href: "/dashboard/orders", label: "Commandes" }}
+        back={{ href: "/dashboard/orders", label: t("Commandes") }}
         title={order.reference}
         meta={
           <>
             <StatusBadge map={ORDER_STATUS} value={order.status} />
-            <Tag>{ORDER_SOURCE[order.source]}</Tag>
+            <Tag>{t(ORDER_SOURCE[order.source])}</Tag>
           </>
         }
-        description={`Créée le ${formatDateTime(order.created_at)}${order.delivery_mode === "pickup" ? " · retrait en boutique" : ""}`}
+        description={`${t("Créée le {date}", { date: f.dateTime(order.created_at) })}${order.delivery_mode === "pickup" ? ` · ${t("retrait en boutique")}` : ""}`}
         actions={
           <>
-            <WhatsAppButton href={whatsappUrl(order.customer_phone, confirmationText)} label="Confirmer par WhatsApp" />
+            <WhatsAppButton href={whatsappUrl(order.customer_phone, confirmationText)} label={t("Confirmer par WhatsApp")} />
             <OrderStatusActions orderId={order.id} status={order.status} canEdit={canEdit} hasActiveJob={hasActiveJob} deliveryMode={order.delivery_mode as "delivery" | "pickup"} />
           </>
         }
@@ -149,7 +157,7 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
         <div className="flex min-w-0 flex-col gap-6">
           <Panel>
             <PanelHeader
-              title="Articles"
+              title={t("Articles")}
               actions={
                 productsRes.data ? (
                   <EditOrderItems
@@ -171,8 +179,8 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
                   </div>
                   {showAmounts ? (
                     <>
-                      <span className="hidden text-ink-3 tabular sm:block">{formatMoney(i.unit_price, order.currency)}</span>
-                      <span className="w-28 text-right font-medium tabular">{formatMoney(i.line_total, order.currency)}</span>
+                      <span className="hidden text-ink-3 tabular sm:block">{f.money(i.unit_price, order.currency)}</span>
+                      <span className="w-28 text-right font-medium tabular">{f.money(i.line_total, order.currency)}</span>
                     </>
                   ) : null}
                 </li>
@@ -181,22 +189,22 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
             {showAmounts ? (
               <dl className="space-y-1.5 border-t border-line bg-subtle px-5 py-3 text-[13.5px]">
                 <div className="flex justify-between">
-                  <dt className="text-ink-3">Sous-total</dt>
-                  <dd className="tabular">{formatMoney(order.subtotal, order.currency)}</dd>
+                  <dt className="text-ink-3">{t("Sous-total")}</dt>
+                  <dd className="tabular">{f.money(order.subtotal, order.currency)}</dd>
                 </div>
                 <div className="flex justify-between">
-                  <dt className="text-ink-3">Livraison</dt>
-                  <dd className="tabular">{formatMoney(order.delivery_fee, order.currency)}</dd>
+                  <dt className="text-ink-3">{t("Livraison")}</dt>
+                  <dd className="tabular">{f.money(order.delivery_fee, order.currency)}</dd>
                 </div>
                 {Number(order.discount) > 0 ? (
                   <div className="flex justify-between">
-                    <dt className="text-ink-3">Remise</dt>
-                    <dd className="tabular">− {formatMoney(order.discount, order.currency)}</dd>
+                    <dt className="text-ink-3">{t("Remise")}</dt>
+                    <dd className="tabular">− {f.money(order.discount, order.currency)}</dd>
                   </div>
                 ) : null}
                 <div className="flex justify-between pt-1 text-[15px] font-semibold">
-                  <dt>Total</dt>
-                  <dd className="tabular">{formatMoney(order.total, order.currency)}</dd>
+                  <dt>{t("Total")}</dt>
+                  <dd className="tabular">{f.money(order.total, order.currency)}</dd>
                 </div>
               </dl>
             ) : null}
@@ -204,7 +212,7 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
 
           <Panel>
             <PanelHeader
-              title="Client et livraison"
+              title={t("Client et livraison")}
               actions={
                 canEdit ? (
                   <EditOrderDetails
@@ -231,7 +239,7 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
               <DescriptionList
                 items={[
                   {
-                    label: "Client",
+                    label: t("Client"),
                     value: order.customer_id ? (
                       <Link href={`/dashboard/customers/${order.customer_id}`} className="font-medium hover:text-accent">
                         {order.customer_name}
@@ -241,13 +249,13 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
                     ),
                   },
                   {
-                    label: "Téléphone",
+                    label: t("Téléphone"),
                     value: (
                       <span className="flex flex-wrap items-center gap-2">
                         <span className="tabular">{formatPhone(order.customer_phone)}</span>
                         <Button asChild size="xs" variant="secondary">
                           <a href={telHref(order.customer_phone) ?? "#"}>
-                            <Phone /> Appeler
+                            <Phone /> {t("Appeler")}
                           </a>
                         </Button>
                         <WhatsAppButton size="sm" href={whatsappUrl(order.customer_phone)} label="WhatsApp" />
@@ -255,30 +263,30 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
                     ),
                   },
                   {
-                    label: "Mode",
-                    value: order.delivery_mode === "pickup" ? "Retrait en boutique" : "Livraison à domicile",
+                    label: t("Mode"),
+                    value: order.delivery_mode === "pickup" ? t("Retrait en boutique") : t("Livraison à domicile"),
                   },
                   ...(order.delivery_mode === "delivery"
                     ? [
                         {
-                          label: "Adresse",
+                          label: t("Adresse"),
                           value: (
                             <span>
-                              {order.delivery_address ?? <span className="text-warning-ink">Non renseignée</span>}
+                              {order.delivery_address ?? <span className="text-warning-ink">{t("Non renseignée")}</span>}
                               {dropoff ? (
                                 <a href={googleMapsDirectionsUrl(dropoff)} target="_blank" rel="noopener noreferrer" className="mt-1 flex items-center gap-1 text-xs text-accent hover:underline">
-                                  <MapPin className="size-3" /> Position GPS enregistrée
+                                  <MapPin className="size-3" /> {t("Position GPS enregistrée")}
                                 </a>
                               ) : (
-                                <span className="mt-1 block text-xs text-ink-3">Pas de position GPS</span>
+                                <span className="mt-1 block text-xs text-ink-3">{t("Pas de position GPS")}</span>
                               )}
                             </span>
                           ),
                         },
                       ]
                     : []),
-                  ...(order.instructions ? [{ label: "Instructions", value: order.instructions }] : []),
-                  ...(order.internal_note ? [{ label: "Note interne", value: <span className="text-ink-2">{order.internal_note}</span> }] : []),
+                  ...(order.instructions ? [{ label: t("Instructions"), value: order.instructions }] : []),
+                  ...(order.internal_note ? [{ label: t("Note interne"), value: <span className="text-ink-2">{order.internal_note}</span> }] : []),
                 ]}
               />
             </div>
@@ -312,6 +320,7 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
             storeName={storeRes.data?.name ?? ctx.store.name}
             canAssign={canAssign}
             staleAfterSeconds={staleAfter}
+            plan={{ tracking: plan.tracking, maxCouriers: plan.max_couriers, isOwner: ctx.isOwner }}
           />
           {showAmounts ? (
             <PaymentPanel
@@ -321,7 +330,7 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
               paymentStatus={order.payment_status}
               paymentMethod={order.payment_method}
               canEdit={canEdit}
-              transactions={(txRes.data ?? []).map((t) => ({ ...t, amount: Number(t.amount) }))}
+              transactions={(txRes.data ?? []).map((tx) => ({ ...tx, amount: Number(tx.amount) }))}
             />
           ) : null}
         </div>

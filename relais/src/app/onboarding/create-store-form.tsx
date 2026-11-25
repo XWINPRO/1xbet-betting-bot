@@ -1,5 +1,7 @@
 "use client";
 
+import { useI18n } from "@/i18n/client";
+import { msg } from "@/i18n/msg";
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -10,9 +12,10 @@ import { Button } from "@/components/ui/button";
 import { Notice } from "@/components/ui/page";
 import { slugify } from "@/lib/utils";
 
-const CATEGORIES = ["Mode et vêtements", "Beauté et cosmétiques", "Alimentation", "Restauration", "Électronique", "Maison et décoration", "Santé et pharmacie", "Librairie et papeterie", "Autre"];
+const CATEGORIES = [msg("Mode et vêtements"), msg("Beauté et cosmétiques"), msg("Alimentation"), msg("Restauration"), msg("Électronique"), msg("Maison et décoration"), msg("Santé et pharmacie"), msg("Librairie et papeterie"), msg("Autre")];
 
 export function CreateStoreForm({ siteHost }: { siteHost: string }) {
+  const { t } = useI18n();
   const router = useRouter();
   const [values, setValues] = React.useState({ name: "", slug: "", category: "", phone: "", whatsapp: "", city: "", address: "", default_delivery_fee: "" });
   const [slugTouched, setSlugTouched] = React.useState(false);
@@ -38,7 +41,7 @@ export function CreateStoreForm({ siteHost }: { siteHost: string }) {
         setFormError(res.error);
         return;
       }
-      toast.success("Boutique créée.");
+      toast.success(t("Boutique créée."));
       router.push("/dashboard");
       router.refresh();
     });
@@ -46,11 +49,11 @@ export function CreateStoreForm({ siteHost }: { siteHost: string }) {
 
   return (
     <form onSubmit={submit} className="flex flex-col gap-4" noValidate>
-      {formError ? <Notice tone="danger">{formError}</Notice> : null}
-      <Field label="Nom de la boutique" htmlFor="name" error={errors.name}>
+      {formError ? <Notice tone="danger">{t(formError)}</Notice> : null}
+      <Field label={t("Nom de la boutique")} htmlFor="name" error={errors.name}>
         <Input id="name" value={values.name} onChange={(e) => set("name", e.target.value)} required autoFocus />
       </Field>
-      <Field label="Adresse de votre page publique" htmlFor="slug" error={errors.slug} hint="Lettres minuscules, chiffres et tirets.">
+      <Field label={t("Adresse de votre page publique")} htmlFor="slug" error={errors.slug} hint={t("Lettres minuscules, chiffres et tirets.")}>
         <div className="flex items-center rounded-md border border-line-strong bg-subtle shadow-xs focus-within:border-accent focus-within:shadow-focus">
           <span className="pl-3 text-[13px] whitespace-nowrap text-ink-3">{siteHost}/shop/</span>
           <input
@@ -66,34 +69,34 @@ export function CreateStoreForm({ siteHost }: { siteHost: string }) {
         </div>
       </Field>
       <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="Téléphone" htmlFor="phone" error={errors.phone}>
+        <Field label={t("Téléphone")} htmlFor="phone" error={errors.phone}>
           <Input id="phone" type="tel" value={values.phone} onChange={(e) => set("phone", e.target.value)} required />
         </Field>
-        <Field label="WhatsApp" htmlFor="whatsapp" error={errors.whatsapp} optional>
-          <Input id="whatsapp" type="tel" value={values.whatsapp} onChange={(e) => set("whatsapp", e.target.value)} placeholder="Si différent" />
+        <Field label={t("WhatsApp")} htmlFor="whatsapp" error={errors.whatsapp} optional>
+          <Input id="whatsapp" type="tel" value={values.whatsapp} onChange={(e) => set("whatsapp", e.target.value)} placeholder={t("Si différent")} />
         </Field>
       </div>
       <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="Catégorie" htmlFor="category" optional>
+        <Field label={t("Catégorie")} htmlFor="category" optional>
           <NativeSelect id="category" value={values.category} onChange={(e) => set("category", e.target.value)}>
-            <option value="">Choisir…</option>
+            <option value="">{t("Choisir…")}</option>
             {CATEGORIES.map((c) => (
-              <option key={c}>{c}</option>
+              <option key={c} value={c}>{t(c)}</option>
             ))}
           </NativeSelect>
         </Field>
-        <Field label="Ville" htmlFor="city" optional>
+        <Field label={t("Ville")} htmlFor="city" optional>
           <Input id="city" value={values.city} onChange={(e) => set("city", e.target.value)} placeholder="Douala" />
         </Field>
       </div>
-      <Field label="Adresse (point de collecte des livreurs)" htmlFor="address" optional hint="Vous pourrez placer le point exact sur la carte ensuite.">
-        <Input id="address" value={values.address} onChange={(e) => set("address", e.target.value)} placeholder="Quartier, rue, repère" />
+      <Field label={t("Adresse (point de collecte des livreurs)")} htmlFor="address" optional hint={t("Vous pourrez placer le point exact sur la carte ensuite.")}>
+        <Input id="address" value={values.address} onChange={(e) => set("address", e.target.value)} placeholder={t("Quartier, rue, repère")} />
       </Field>
-      <Field label="Frais de livraison par défaut" htmlFor="fee" error={errors.default_delivery_fee} optional>
+      <Field label={t("Frais de livraison par défaut")} htmlFor="fee" error={errors.default_delivery_fee} optional>
         <InputGroup id="fee" type="number" min={0} step={100} inputMode="numeric" suffix="FCFA" value={values.default_delivery_fee} onChange={(e) => set("default_delivery_fee", e.target.value)} />
       </Field>
       <Button type="submit" variant="primary" size="lg" loading={pending} className="mt-2">
-        Créer la boutique
+        {t("Créer la boutique")}
       </Button>
     </form>
   );

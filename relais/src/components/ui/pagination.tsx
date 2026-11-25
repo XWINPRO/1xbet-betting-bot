@@ -2,9 +2,9 @@ import Link from "next/link";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { formatNumber } from "@/lib/format";
+import { getI18n } from "@/i18n/server";
 
-export function Pagination({
+export async function Pagination({
   page,
   pageSize,
   total,
@@ -15,13 +15,14 @@ export function Pagination({
   total: number;
   makeHref: (page: number) => string;
 }) {
+  const { t, f } = await getI18n();
   const pages = Math.max(1, Math.ceil(total / pageSize));
   const from = total === 0 ? 0 : (page - 1) * pageSize + 1;
   const to = Math.min(total, page * pageSize);
   return (
     <div className="flex items-center justify-between gap-3 border-t border-line px-5 py-3 text-[13px] text-ink-3">
       <span className="tabular">
-        {formatNumber(from)}–{formatNumber(to)} sur {formatNumber(total)}
+        {t("{from}–{to} sur {total}", { from: f.number(from), to: f.number(to), total: f.number(total) })}
       </span>
       <div className="flex items-center gap-1">
         <Link
@@ -30,7 +31,7 @@ export function Pagination({
           href={makeHref(Math.max(1, page - 1))}
           className={cn(buttonVariants({ variant: "secondary", size: "sm" }), page <= 1 && "pointer-events-none opacity-40")}
         >
-          <ChevronLeft /> Précédent
+          <ChevronLeft /> {t("Précédent")}
         </Link>
         <Link
           aria-disabled={page >= pages}
@@ -38,7 +39,7 @@ export function Pagination({
           href={makeHref(Math.min(pages, page + 1))}
           className={cn(buttonVariants({ variant: "secondary", size: "sm" }), page >= pages && "pointer-events-none opacity-40")}
         >
-          Suivant <ChevronRight />
+          {t("Suivant")} <ChevronRight />
         </Link>
       </div>
     </div>

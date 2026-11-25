@@ -4,9 +4,11 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
+import { useI18n } from "@/i18n/client";
 
 /** Notifie le livreur des nouvelles propositions et rafraîchit ses données. */
 export function CourierRealtime({ courierId }: { courierId: string }) {
+  const { t } = useI18n();
   const router = useRouter();
   React.useEffect(() => {
     const supabase = getSupabaseBrowserClient();
@@ -20,7 +22,7 @@ export function CourierRealtime({ courierId }: { courierId: string }) {
       .on("postgres_changes", { event: "*", schema: "public", table: "delivery_jobs", filter: `courier_id=eq.${courierId}` }, (payload) => {
         const row = payload.new as { status?: string; reference?: string } | null;
         if (row?.status === "offered" && payload.eventType !== "DELETE") {
-          toast.message(`Nouvelle course proposée${row.reference ? ` : ${row.reference}` : ""}`);
+          toast.message(row.reference ? t("Nouvelle course proposée : {ref}", { ref: row.reference }) : t("Nouvelle course proposée"));
           if ("vibrate" in navigator) navigator.vibrate?.([180, 80, 180]);
         }
         refresh();
